@@ -7,6 +7,8 @@ export interface MiniManagerSettings {
 	downloadImages: boolean;
 	downloadFiles: boolean;
 	useDirectDownload: boolean;
+	strictApiMode: boolean;
+	maxRetries: number;
 }
 
 export const DEFAULT_SETTINGS: MiniManagerSettings = {
@@ -15,6 +17,8 @@ export const DEFAULT_SETTINGS: MiniManagerSettings = {
 	downloadImages: true,
 	downloadFiles: true,
 	useDirectDownload: false,
+	strictApiMode: false,
+	maxRetries: 2,
 };
 
 export class MiniManagerSettingsTab extends PluginSettingTab {
@@ -99,6 +103,59 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.useDirectDownload = value;
 					await this.plugin.saveSettings();
+				})
+			);
+			
+		new Setting(containerEl).setName('Advanced Settings').setHeading();
+		
+		new Setting(containerEl)
+			.setName('Strict API Mode')
+			.setDesc('If enabled, the plugin will fail when API errors occur. Disable to allow graceful fallbacks.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.strictApiMode)
+				.onChange(async (value) => {
+					this.plugin.settings.strictApiMode = value;
+					await this.plugin.saveSettings();
+				})
+			);
+			
+		new Setting(containerEl)
+			.setName('Max Retries')
+			.setDesc('Number of times to retry API requests on transient errors.')
+			.addSlider(slider => slider
+				.setLimits(0, 5, 1)
+				.setValue(this.plugin.settings.maxRetries)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.maxRetries = value;
+					await this.plugin.saveSettings();
+				})
+			);
+			
+		// Add a test connection button
+		new Setting(containerEl)
+			.setName('Test API Connection')
+			.setDesc('Click to test your API key and connection to MyMiniFactory')
+			.addButton(button => button
+				.setButtonText('Test Connection')
+				.onClick(async () => {
+					if (!this.plugin.settings.mmfApiKey) {
+						new Notice('Please enter an API key first');
+						return;
+					}
+					
+					new Notice('Testing connection to MyMiniFactory API...');
+					
+					try {
+						const isValid = await this.plugin.apiService.validateApiKey();
+						if (isValid) {
+							new Notice('✅ Connection successful! API key is valid.');
+						} else {
+							new Notice('❌ Connection failed. Please check your API key.');
+						}
+					} catch (error) {
+						new Notice(`❌ Connection test failed: ${error.message}`);
+					}
 				})
 			);
 	}
