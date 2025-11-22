@@ -66,6 +66,11 @@ export default class MiniManagerPlugin extends Plugin {
 
 		// Register settings tab
 		this.addSettingTab(new MiniManagerSettingsTab(this.app, this));
+
+		// Add a ribbon icon
+		this.addRibbonIcon('download', 'Open Download Manager', () => {
+			new DownloadManagerModal(this.app, this).open();
+		});
 	}
 
 	onunload() {
