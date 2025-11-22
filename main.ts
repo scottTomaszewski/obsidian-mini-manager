@@ -1,3 +1,4 @@
-import DisciplesJournalPlugin from './src/core/DisciplesJournalPlugin';
+import MiniManagerPlugin from './src/core/MiniManagerPlugin';
+import { requestUrl, RequestUrlResponse } from "obsidian";
 
-export default DisciplesJournalPlugin;
+export default MiniManagerPlugin;
