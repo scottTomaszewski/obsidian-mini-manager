@@ -2,6 +2,7 @@ import { App, Notice, TFile, TFolder, normalizePath, requestUrl } from "obsidian
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
+import * as JSZip from "jszip";
 
 export class MMFDownloader {
     private app: App;
@@ -40,18 +41,11 @@ export class MMFDownloader {
                         name: `MyMiniFactory Object ${objectId}`,
                         description: "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.",
                         url: `https://www.myminifactory.com/object/${objectId}`,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                        is_paid: false,
-                        download_count: 0,
-                        like_count: 0,
-                        designer: {
-                            name: "Unknown",
-                            url: "",
-                            username: "unknown"
-                        },
                         images: [],
-                        files: []
+                        files: {
+                            total_count: 0,
+                            items: []
+                        }
                     };
                 }
                 
@@ -59,7 +53,7 @@ export class MMFDownloader {
                 const objectFolder = await this.createObjectFolder(object);
                 
                 // Create metadata markdown file with what we have
-                await this.createMetadataFile(object, objectFolder, !objectDetailsRetrieved);
+                await this.createMetadataFile(object, objectFolder);
                 
                 // If we couldn't even get object details and strict mode is on, stop here
                 if (!objectDetailsRetrieved && this.settings.strictApiMode) {
@@ -85,14 +79,6 @@ export class MMFDownloader {
 
                         // First check if the object already contains file URLs
                         let objectWithFiles = object;
-                        let hasFileUrls = false;
-                        
-                        if (objectWithFiles.files && objectWithFiles.files.items && objectWithFiles.files.items.length > 0) {
-							// Handle container with items array
-							hasFileUrls = objectWithFiles.files.items.some(file =>
-								file.download_url && typeof file.download_url === 'string');
-							console.log("Object already contains file URLs, using existing data");
-                        }
                         
                         // Make sure we have a web URL for manual downloads
                         if (!objectWithFiles.url) {
@@ -103,8 +89,8 @@ export class MMFDownloader {
                         }
                         
                         // Ensure files is an array before proceeding
-                        if (!objectWithFiles.files.items || !Array.isArray(objectWithFiles.files.items)) {
-                            objectWithFiles.files.items = [];
+                        if (!objectWithFiles.files || !objectWithFiles.files.items || !Array.isArray(objectWithFiles.files.items)) {
+                            objectWithFiles.files = { total_count: 0, items: [] };
                             console.warn("Files property is not an array, initializing as empty array");
                         }
                         
@@ -243,8 +229,10 @@ export class MMFDownloader {
             await this.app.vault.createFolder(basePath);
         }
         
+        const designerName = object.designer ? this.sanitizePath(object.designer.name) : "Unknown";
+
         // Create designer folder
-        const designerPath = normalizePath(`${basePath}/${this.sanitizePath(object.designer.name)}`);
+        const designerPath = normalizePath(`${basePath}/${designerName}`);
         if (!await this.folderExists(designerPath)) {
             await this.app.vault.createFolder(designerPath);
         }
@@ -262,13 +250,29 @@ export class MMFDownloader {
         const filePath = normalizePath(`${folderPath}/README.md`);
         
         let content = `# ${object.name}\n\n`;
-        content += `![Main Image](${object.images[0]?.url || ""})\n\n`;
-        content += `## Designer: ${object.designer.name}\n\n`;
-        content += `- **Published:** ${new Date(object.publishedAt).toLocaleDateString()}\n`;
+        if (object.images && object.images.length > 0) {
+            const mainImage = object.images.find(img => img.is_primary) || object.images[0];
+            if (mainImage) {
+                content += `![Main Image](${this.getImageUrl(mainImage) || ""})\n\n`;
+            }
+        }
+
+        if(object.designer){
+            content += `## Designer: ${object.designer.name}\n\n`;
+        }
+        if (object.publishedAt) {
+            content += `- **Published:** ${new Date(object.publishedAt).toLocaleDateString()}\n`;
+        }
         content += `- **MMF URL:** [${object.url}](${object.url})\n`;
-        content += `- **License:** ${object.license || "Not specified"}\n`;
-        content += `- **Downloads:** ${object.downloadsCount}\n`;
-        content += `- **Likes:** ${object.likesCount}\n\n`;
+        if (object.license) {
+            content += `- **License:** ${object.license}\n`;
+        }
+        if (object.downloadsCount) {
+            content += `- **Downloads:** ${object.downloadsCount}\n`;
+        }
+        if (object.likesCount) {
+            content += `- **Likes:** ${object.likesCount}\n\n`;
+        }
         
         content += `## Description\n\n${object.description}\n\n`;
         
@@ -288,10 +292,10 @@ export class MMFDownloader {
             content += '\n';
         }
         
-        if (object.files && object.files.length > 0) {
+        if (object.files && object.files.items && object.files.items.length > 0) {
             content += `## Files\n\n`;
-            object.files.forEach(file => {
-                content += `- ${file.filename} (${this.formatFileSize(file.filesize)})\n`;
+            object.files.items.forEach(file => {
+                content += `- ${file.filename} (${this.formatFileSize(file.size)})\n`;
             });
         }
         
@@ -301,7 +305,7 @@ export class MMFDownloader {
     /**
      * Safely extract file extension from URL or provide a default
      */
-    private getFileExtension(url: string | undefined): string {
+    private getFileExtensionFromUrl(url: string | undefined): string {
         // Return default extension if URL is undefined
         if (!url) {
             console.log("Warning: Image URL is undefined, using default .jpg extension");
@@ -328,8 +332,6 @@ export class MMFDownloader {
      * Extract image URL from MyMiniFactory image object based on API response structure
      */
     private getImageUrl(image: any): string | undefined {
-        console.log("Processing image:", JSON.stringify(image, null, 2));
-        
         // If image is already a string URL, return it directly
         if (typeof image === 'string' && image.startsWith('http')) {
             return image;
@@ -359,116 +361,10 @@ export class MMFDownloader {
             return image.url;
         }
         
-        // Recursively search through properties looking for URL strings
-        for (const key in image) {
-            const value = image[key];
-            
-            // If it's a string URL, return it
-            if (typeof value === 'string' && value.startsWith('http')) {
-                return value;
-            }
-            
-            // If it's an object with a url property, return that
-            if (value && typeof value === 'object' && typeof value.url === 'string' && value.url.startsWith('http')) {
-                return value.url;
-            }
-        }
-        
         // No URL found
         return undefined;
     }
     
-    /**
-     * Extract file download URL from MMF file object
-     * Handles different possible structures from the API
-     */
-    private getFileDownloadUrl(file: any): string | undefined {
-        console.log("Processing file for download:", JSON.stringify(file, null, 2));
-        
-        if (!file) {
-            return undefined;
-        }
-        
-        // Direct case: already a string URL
-        if (typeof file === 'string' && file.startsWith('http')) {
-            return file;
-        }
-        
-        // Most direct case: download_url property
-        if (file.download_url && typeof file.download_url === 'string' && file.download_url.startsWith('http')) {
-            return file.download_url;
-        }
-        
-        // Next case: url property
-        if (file.url && typeof file.url === 'string' && file.url.startsWith('http')) {
-            return file.url;
-        }
-        
-        // Special case: look for download links in a nested structure
-        if (file.links && file.links.download && typeof file.links.download === 'string') {
-            return file.links.download;
-        }
-        
-        // Search recursively through properties
-        for (const key in file) {
-            const value = file[key];
-            
-            // If it's a string URL, return it
-            if (typeof value === 'string' && value.startsWith('http')) {
-                if (key.includes('url') || key.includes('download') || key.includes('link')) {
-                    return value;
-                }
-            }
-            
-            // If it's an object, look for url or download properties
-            if (value && typeof value === 'object') {
-                // Check for url properties first
-                if (value.download_url && typeof value.download_url === 'string') {
-                    return value.download_url;
-                }
-                if (value.url && typeof value.url === 'string') {
-                    return value.url;
-                }
-                
-                // Deeper search for keys that might contain urls
-                for (const subKey in value) {
-                    if (typeof value[subKey] === 'string' && value[subKey].startsWith('http')) {
-                        if (subKey.includes('url') || subKey.includes('download') || subKey.includes('link')) {
-                            return value[subKey];
-                        }
-                    }
-                }
-            }
-        }
-        
-        return undefined;
-    }
-    
-    /**
-     * Safely extract file extension from URL or provide a default
-     */
-    private getFileExtension(url: string | undefined): string {
-        // Return default extension if URL is undefined
-        if (!url) {
-            console.log("Warning: URL is undefined, using default .jpg extension");
-            return ".jpg";
-        }
-    
-        try {
-            // Try to extract extension from URL string
-            const matches = url.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
-            if (matches && matches.length > 1) {
-                return `.${matches[1].toLowerCase()}`;
-            }
-            
-            // For URLs without extensions or unexpected formats, use a default
-            console.log(`No file extension found in URL: ${url}, using default .jpg extension`);
-            return ".jpg";
-        } catch (error) {
-            console.error(`Error extracting file extension from URL: ${url}`, error);
-            return ".jpg";
-        }
-    }
     
     private async downloadImages(object: MMFObject, folderPath: string): Promise<void> {
         console.log("Processing object for images:", object.id, object.name);
@@ -480,7 +376,7 @@ export class MMFDownloader {
         }
         
         // Check if images array exists and handle it
-        if (object.images) {
+        if (object.images && object.images.length > 0) {
             // The API returns images as an array of complex objects
             const imageArray = Array.isArray(object.images) ? object.images : [object.images];
             
@@ -506,18 +402,6 @@ export class MMFDownloader {
             }
         } else {
             console.log("No images array found for object", object.id);
-            
-            // Fallback options if no images array is found
-            if (object.image) {
-                console.log("Found single image property, trying to use it");
-                const imageUrl = this.getImageUrl(object.image);
-                if (imageUrl) {
-                    await this.downloadSingleImage(imageUrl, imagesPath, "main_image");
-                }
-            } else if (object.thumbnail_url) {
-                console.log("Found thumbnail URL, trying to use it");
-                await this.downloadSingleImage(object.thumbnail_url, imagesPath, "thumbnail");
-            }
         }
         
         // If we still have no images, create a placeholder
@@ -535,7 +419,7 @@ export class MMFDownloader {
      */
     private async downloadSingleImage(url: string, folderPath: string, baseFileName: string): Promise<boolean> {
         try {
-            const fileName = `${baseFileName}${this.getFileExtension(url)}`;
+            const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
             const filePath = normalizePath(`${folderPath}/${fileName}`);
             
             new Notice(`Downloading ${baseFileName}...`);
@@ -578,6 +462,10 @@ export class MMFDownloader {
             await this.app.vault.createFolder(filesPath);
         }
         
+        if (!object.files || !object.files.items) {
+            return;
+        }
+
         // Download each file
         for (const item of object.files.items) {
             if (!item.download_url) {
@@ -606,8 +494,14 @@ export class MMFDownloader {
                     }
                     
                     const filePath = normalizePath(`${filesPath}/${item.filename}`);
-                    await this.app.vault.createBinary(filePath, response.arrayBuffer);
+                    const arrayBuffer = response.arrayBuffer;
+                    await this.app.vault.createBinary(filePath, arrayBuffer);
                     new Notice(`Successfully downloaded ${item.filename}`);
+
+                    if (item.filename.toLowerCase().endsWith('.zip')) {
+                        new Notice(`Extracting ${item.filename}...`);
+                        await this.extractZipFile(arrayBuffer, filesPath);
+                    }
                 } catch (error) {
                     new Notice(`Error downloading ${item.filename}: ${error.message}`);
                     console.error(`Error downloading file ${item.filename}:`, error);
@@ -615,6 +509,34 @@ export class MMFDownloader {
             } else {
 				console.log(`Skipping direct download for file ${item.filename}`);
 			}
+        }
+    }
+
+    private async extractZipFile(zipData: ArrayBuffer, destinationPath: string): Promise<void> {
+        try {
+            const zip = await JSZip.loadAsync(zipData);
+            new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
+
+            for (const filename in zip.files) {
+                const file = zip.files[filename];
+
+                if (!file.dir) {
+                    const content = await file.async('arraybuffer');
+                    const filePath = normalizePath(`${destinationPath}/${filename}`);
+                    
+                    // Ensure subdirectories exist
+                    const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                    if (parentDir && !await this.folderExists(parentDir)) {
+                        await this.app.vault.createFolder(parentDir);
+                    }
+                    
+                    await this.app.vault.createBinary(filePath, content);
+                }
+            }
+            new Notice('Extraction complete.');
+        } catch (error) {
+            new Notice(`Failed to extract zip file: ${error.message}`);
+            console.error('Error extracting zip file:', error);
         }
     }
     
@@ -632,11 +554,6 @@ export class MMFDownloader {
         return path.replace(/[\\/:*?"<>|]/g, '_').trim();
     }
     
-    private getFileExtension(url: string): string {
-        const match = url.match(/\.(jpg|jpeg|png|gif|webp)($|\?)/i);
-        return match ? `.${match[1].toLowerCase()}` : '.jpg';
-    }
-    
     private formatFileSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -644,3 +561,4 @@ export class MMFDownloader {
         return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
     }
 }
+

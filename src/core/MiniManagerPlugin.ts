@@ -56,11 +56,6 @@ export default class MiniManagerPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		
-		// Ensure backward compatibility - if no API key but we have OAuth credentials, show a notice
-		if (!this.settings.mmfApiKey && (this.settings.clientId || this.settings.clientSecret)) {
-			new Notice('Authentication method has changed: Please set your API key in the settings.', 15000);
-		}
 	}
 
 	async saveSettings() {
@@ -133,7 +128,11 @@ class MMFSearchModal extends Modal {
 			resultEl.createEl('h3', { text: result.name });
 			
 			const metaEl = resultEl.createEl('div', { cls: 'mmf-result-meta' });
-			metaEl.createEl('span', { text: `ID: ${result.id} | Designer: ${result.designer.name}` });
+			if (result.designer) {
+				metaEl.createEl('span', { text: `ID: ${result.id} | Designer: ${result.designer.name}` });
+			} else {
+				metaEl.createEl('span', { text: `ID: ${result.id}` });
+			}
 			
 			if (result.description) {
 				resultEl.createEl('p', { text: result.description.substring(0, 100) + '...' });
@@ -147,7 +146,7 @@ class MMFSearchModal extends Modal {
 						.onClick(async () => {
 							try {
 								new Notice(`Downloading "${result.name}"...`);
-								await this.plugin.downloader.downloadObject(result.id);
+								await this.plugin.downloader.downloadObject(String(result.id));
 								new Notice(`Successfully downloaded "${result.name}"`);
 							} catch (error) {
 								new Notice(`Error downloading: ${error.message}`);

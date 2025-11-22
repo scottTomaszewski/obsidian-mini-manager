@@ -1,6 +1,6 @@
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
-import { MMFObject, MMFSearchResponse, MMFObjectFile } from "../models/MMFObject";
-import { Notice, requestUrl } from "obsidian";
+import { MMFObject} from "../models/MMFObject";
+import { requestUrl } from "obsidian";
 
 export class MMFApiService {
     private apiBaseUrl = "https://www.myminifactory.com/api/v2";
@@ -146,19 +146,11 @@ export class MMFApiService {
             name: `Object ${objectId}`,
             description: "Unable to retrieve object details from the API",
             url: this.getObjectWebUrl(objectId),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_paid: false,
-            download_count: 0,
-            like_count: 0,
-            designer: {
-                name: "Unknown",
-                url: "",
-                username: "unknown"
-            },
             images: [],
-            files: [],
-            _api_error: true // Special flag to indicate this is a fallback object
+            files: {
+                total_count: 0,
+                items: [],
+            }
         };
     }
     
@@ -191,90 +183,7 @@ export class MMFApiService {
             return fallbackObject;
         }
     }
-    
-    async getDownloadLinks(objectId: string, useStrict: boolean = false): Promise<MMFObject> {
-        try {
-            console.log("Attempting to get download links through primary endpoint");
-            return await this.apiRequest(`/objects/${objectId}/download-links`);
-        } catch (primaryError) {
-            console.warn(`Primary download links endpoint failed: ${primaryError.message}`);
-            
-            // Try alternative endpoints
-            try {
-                console.log("Trying alternative endpoint for file downloads");
-                
-                // Try to get the full object details which might include file URLs
-                let objectDetails: MMFObject;
-                
-                try {
-                    objectDetails = await this.getObjectById(objectId);
-                } catch (objectError) {
-                    console.error(`Could not get basic object details: ${objectError.message}`);
-                    
-                    // If strict mode is enabled, throw the error
-                    if (useStrict || this.settings.strictApiMode) {
-                        throw objectError;
-                    }
-                    
-                    // Create a fallback object with website link
-                    objectDetails = this.createFallbackObject(objectId);
-                }
-                
-                // Check if we have files with URLs already
-                if (objectDetails.files && 
-                    Array.isArray(objectDetails.files) && 
-                    objectDetails.files.some(file => file.url || file.download_url)) {
-                    console.log("Found file URLs in object details");
-                    return objectDetails;
-                }
-                
-                // Try another potential endpoint format
-                try {
-                    console.log("Trying third endpoint format");
-                    const filesData = await this.apiRequest(`/objects/${objectId}/files`);
-                    
-                    // If we got files data, merge it with our object
-                    if (filesData && filesData.files) {
-                        objectDetails.files = filesData.files;
-                        return objectDetails;
-                    } else if (filesData && Array.isArray(filesData)) {
-                        // Handle case where the API returns an array directly
-                        objectDetails.files = filesData;
-                        return objectDetails;
-                    } else if (filesData && 'items' in filesData && Array.isArray(filesData.items)) {
-                        // Handle container with items array (new API format)
-                        objectDetails.files = filesData;
-                        return objectDetails;
-                    } else if (filesData && 'total_count' in filesData && 'items' in filesData) {
-                        // Handle another possible container format
-                        objectDetails.files = filesData;
-                        return objectDetails;
-                    }
-                    
-                    return objectDetails;
-                } catch (thirdError) {
-                    console.warn(`Third endpoint attempt failed: ${thirdError.message}`);
-                    
-                    // Augment the object with web URLs for manual download
-                    objectDetails.url = objectDetails.url || this.getObjectWebUrl(objectId, objectDetails.name);
-                    
-                    return objectDetails; // Return what we have so far
-                }
-            } catch (secondaryError) {
-                console.error(`All download link attempts failed for object ${objectId}`);
-                
-                // If we're instructed to throw errors, do so
-                if (useStrict || this.settings.strictApiMode) {
-                    throw new Error(`Failed to get download links: API endpoints may have changed. Original error: ${primaryError.message}`);
-                }
-                
-                // Otherwise, return a fallback object
-                const fallbackObject = this.createFallbackObject(objectId);
-                return fallbackObject;
-            }
-        }
-    }
-    
+
     /**
      * Check if the API key is valid by making a simple API request
      */
