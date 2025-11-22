@@ -1,14 +1,17 @@
 import { App, Modal, Setting } from 'obsidian';
 import { DownloadManager, DownloadJob } from '../services/DownloadManager';
 import MiniManagerPlugin from '../core/MiniManagerPlugin';
+import { MMFDownloadModal } from './MMFDownloadModal';
 
 export class DownloadManagerModal extends Modal {
     private downloadManager: DownloadManager;
     private jobsContainer: HTMLElement;
     private listener: (jobs: DownloadJob[]) => void;
+    private plugin: MiniManagerPlugin;
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
+        this.plugin = plugin;
         this.downloadManager = DownloadManager.getInstance();
     }
 
@@ -17,6 +20,11 @@ export class DownloadManagerModal extends Modal {
         contentEl.createEl('h2', { text: 'Download Manager' });
 
         new Setting(contentEl)
+            .addButton(button => button
+                .setButtonText('Add New Download')
+                .onClick(() => {
+                    new MMFDownloadModal(this.app, this.plugin).open();
+                }))
             .addButton(button => button
                 .setButtonText('Clear Completed')
                 .onClick(() => {
