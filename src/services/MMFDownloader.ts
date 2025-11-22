@@ -1,4 +1,4 @@
-import { App, Notice, TFile, TFolder, normalizePath, requestUrl } from "obsidian";
+import { App, Notice, TFile, TFolder, normalizePath, requestUrl, stringifyYaml } from "obsidian";
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
@@ -259,7 +259,21 @@ export class MMFDownloader {
     private async createMetadataFile(object: MMFObject, folderPath: string): Promise<void> {
         const filePath = normalizePath(`${folderPath}/README.md`);
         
-        let content = `# ${object.name}\n\n`;
+        const frontmatter: any = {
+            site_url: object.url,
+            description: object.description,
+            tags: object.tags || [],
+        };
+
+        if (object.designer) {
+            frontmatter.designer = object.designer.name;
+        }
+
+        const frontmatterString = stringifyYaml(frontmatter);
+
+        let content = `---\n${frontmatterString}---\n\n`;
+        
+        content += `# ${object.name}\n\n`;
         if (object.images && object.images.length > 0) {
             const mainImage = object.images.find(img => img.is_primary) || object.images[0];
             if (mainImage) {
