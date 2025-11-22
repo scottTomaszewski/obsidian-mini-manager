@@ -56,6 +56,7 @@ export class MMFDownloader {
             this.downloadManager.updateJob(job.id, 'downloading', 30);
             // Create metadata markdown file with what we have
             await this.createMetadataFile(object, objectFolder);
+            await this.saveMetadataFile(object, objectFolder);
             
             this.downloadManager.updateJob(job.id, 'downloading', 40);
             // If we couldn't even get object details and strict mode is on, stop here
@@ -557,6 +558,11 @@ export class MMFDownloader {
         }
     }
     
+    private async saveMetadataFile(object: MMFObject, folderPath: string): Promise<void> {
+        const filePath = normalizePath(`${folderPath}/mmf-metadata.json`);
+        await this.app.vault.create(filePath, JSON.stringify(object, null, 2));
+    }
+
     // Helper methods
     private async folderExists(path: string): Promise<boolean> {
         try {

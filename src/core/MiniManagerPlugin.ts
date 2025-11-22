@@ -8,11 +8,13 @@ import { MMFApiService } from '../services/MMFApiService';
 import { MMFDownloader } from '../services/MMFDownloader';
 import { DownloadManagerModal } from '../ui/DownloadManagerModal';
 import { MMFSearchModal } from '../ui/MMFSearchModal';
+import { SearchService } from '../services/SearchService';
 
 export default class MiniManagerPlugin extends Plugin {
 	settings: MiniManagerSettings;
 	apiService: MMFApiService;
 	downloader: MMFDownloader;
+	searchService: SearchService;
 
 	async onload() {
 		console.log('Loading Mini Manager plugin');
@@ -23,6 +25,19 @@ export default class MiniManagerPlugin extends Plugin {
 		// Initialize services
 		this.apiService = new MMFApiService(this.settings);
 		this.downloader = new MMFDownloader(this.app, this.settings);
+		this.searchService = new SearchService(this.app, this.settings);
+		await this.searchService.buildIndex();
+
+		this.registerEvent(this.app.vault.on('create', () => {
+			this.searchService.buildIndex();
+		}));
+		this.registerEvent(this.app.vault.on('delete', () => {
+			this.searchService.buildIndex();
+		}));
+		this.registerEvent(this.app.vault.on('rename', () => {
+			this.searchService.buildIndex();
+		}));
+
 
 		// Check if API key is set and show a notice if it's not
 		if (!this.settings.mmfApiKey) {

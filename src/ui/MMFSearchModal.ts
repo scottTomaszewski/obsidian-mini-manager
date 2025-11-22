@@ -7,6 +7,7 @@ export class MMFSearchModal extends Modal {
 	query: string = "";
 	searchResults: MMFObject[] = [];
 	resultContainerEl: HTMLElement;
+	searchLocal: boolean = true;
 
 	constructor(app: App, plugin: MiniManagerPlugin) {
 		super(app);
@@ -15,7 +16,7 @@ export class MMFSearchModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Search MyMiniFactory' });
+		contentEl.createEl('h2', { text: 'Search' });
 
 		// Search input
 		new Setting(contentEl)
@@ -24,6 +25,13 @@ export class MMFSearchModal extends Modal {
 				text.onChange((value) => {
 					this.query = value;
 				}));
+
+		new Setting(contentEl)
+			.setName('Search Local Files')
+			.addToggle(toggle => toggle
+				.setValue(this.searchLocal)
+				.onChange(value => this.searchLocal = value)
+			);
 
 		// Search button
 		new Setting(contentEl)
@@ -37,13 +45,18 @@ export class MMFSearchModal extends Modal {
 							return;
 						}
 						
-						try {
-							new Notice('Searching MyMiniFactory...');
-							this.searchResults = await this.plugin.apiService.searchObjects(this.query);
+						if (this.searchLocal) {
+							this.searchResults = this.plugin.searchService.search(this.query);
 							this.displaySearchResults();
-						} catch (error) {
-							new Notice(`Error: ${error.message}`);
-							console.error(error);
+						} else {
+							try {
+								new Notice('Searching MyMiniFactory...');
+								this.searchResults = await this.plugin.apiService.searchObjects(this.query);
+								this.displaySearchResults();
+							} catch (error) {
+								new Notice(`Error: ${error.message}`);
+								console.error(error);
+							}
 						}
 					}));
 
