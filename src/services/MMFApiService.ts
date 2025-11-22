@@ -1,10 +1,12 @@
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFObject} from "../models/MMFObject";
 import { requestUrl } from "obsidian";
+import { LoggerService } from "./LoggerService";
 
 export class MMFApiService {
     private apiBaseUrl = "https://www.myminifactory.com/api/v2";
     private settings: MiniManagerSettings;
+    private logger: LoggerService;
     
     // Add debugging info to track API requests and responses
     private debug = true; // Set to false in production
@@ -12,8 +14,9 @@ export class MMFApiService {
     // Maximum number of retries for transient errors
     private maxRetries = 2;
     
-    constructor(settings: MiniManagerSettings) {
+    constructor(settings: MiniManagerSettings, logger: LoggerService) {
         this.settings = settings;
+        this.logger = logger;
     }
     
     /**
@@ -24,12 +27,12 @@ export class MMFApiService {
         // Add API key as query parameter
         const separator = endpoint.includes('?') ? '&' : '?';
         const url = `${this.apiBaseUrl}${endpoint}${separator}key=${this.settings.mmfApiKey}`;
-        console.log(`Making API request to: ${url}`);
+        this.logger.info(`Making API request to: ${url}`);
         
         try {
             // Debug log the API request details
             if (this.debug) {
-                console.log(`API Request:
+                this.logger.debug(`API Request:
                     URL: ${url}
                     Method: ${method}
                     Attempt: ${retries + 1}/${this.maxRetries + 1}
@@ -94,7 +97,7 @@ export class MMFApiService {
                 // Retry logic for retryable errors
                 if (retryable && retries < this.maxRetries) {
                     const delay = Math.pow(2, retries) * 1000; // Exponential backoff
-                    console.log(`Retryable error encountered, retrying in ${delay}ms...`);
+                    this.logger.warn(`Retryable error encountered, retrying in ${delay}ms...`);
                     
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this.apiRequest(endpoint, method, retries + 1);
@@ -113,14 +116,14 @@ export class MMFApiService {
                  error.message.includes('timeout'))) {
                 
                 const delay = Math.pow(2, retries) * 1000; // Exponential backoff
-                console.log(`Network error encountered, retrying in ${delay}ms...`);
-                console.error(`Attempt ${retries + 1} failed:`, error);
+                this.logger.warn(`Network error encountered, retrying in ${delay}ms...`);
+                this.logger.error(`Attempt ${retries + 1} failed: ${error.message}`);
                 
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return this.apiRequest(endpoint, method, retries + 1);
             }
             
-            console.error(`API request failed after ${retries + 1} attempts: ${error.message}`, error);
+            this.logger.error(`API request failed after ${retries + 1} attempts: ${error.message}`);
             throw new Error(`API request failed: ${error.message}`);
         }
     }
@@ -159,7 +162,7 @@ export class MMFApiService {
             const data = await this.apiRequest(`/objects?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}`);
             return data.objects || [];
         } catch (error) {
-            console.error("Error searching MMF objects:", error);
+            this.logger.error(`Error searching MMF objects: ${error.message}`);
             throw new Error(`Failed to search objects: ${error.message}`);
         }
     }
@@ -168,7 +171,7 @@ export class MMFApiService {
         try {
             return await this.apiRequest(`/objects/${objectId}`);
         } catch (error) {
-            console.error(`Error getting object ${objectId}:`, error);
+            this.logger.error(`Error getting object ${objectId}: ${error.message}`);
             
             // Create a fallback object with minimal information and web link
             const fallbackObject = this.createFallbackObject(objectId);
@@ -179,7 +182,7 @@ export class MMFApiService {
             }
             
             // Otherwise, return the fallback object with a warning
-            console.warn(`Returning fallback object for ID ${objectId} due to API error`);
+            this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
             return fallbackObject;
         }
     }
@@ -197,7 +200,7 @@ export class MMFApiService {
             await this.apiRequest('/objects?per_page=1');
             return true;
         } catch (error) {
-            console.error("API key validation failed:", error);
+            this.logger.error(`API key validation failed: ${error.message}`);
             return false;
         }
     }

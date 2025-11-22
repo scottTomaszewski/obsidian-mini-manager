@@ -3,26 +3,31 @@ import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
 import * as JSZip from "jszip";
-import { DownloadManager } from "./DownloadManager";
+import { DownloadManager, DownloadJob } from "./DownloadManager";
+import { LoggerService } from "./LoggerService";
 
 export class MMFDownloader {
     private app: App;
     private settings: MiniManagerSettings;
     private apiService: MMFApiService;
     private downloadManager: DownloadManager;
+    private logger: LoggerService;
     
-    constructor(app: App, settings: MiniManagerSettings) {
+    constructor(app: App, settings: MiniManagerSettings, logger: LoggerService) {
         this.app = app;
         this.settings = settings;
-        this.apiService = new MMFApiService(settings);
+        this.logger = logger;
+        this.apiService = new MMFApiService(settings, logger);
         this.downloadManager = DownloadManager.getInstance();
     }
     
     async downloadObject(objectId: string): Promise<void> {
         let object: MMFObject;
         try {
+            this.logger.info(`Attempting to retrieve object ${objectId}`);
             object = await this.apiService.getObjectById(objectId);
         } catch (objectError) {
+            this.logger.error(`Failed to retrieve object ${objectId}: ${objectError.message}`);
             object = {
                 id: objectId,
                 name: `MyMiniFactory Object ${objectId}`,
@@ -39,8 +44,8 @@ export class MMFDownloader {
         const job = this.downloadManager.addJob(object);
 
         try {
-            this.downloadManager.updateJob(job.id, 'downloading', 10);
-            console.log(`Starting download for object ID: ${objectId}`);
+            this.downloadManager.updateJob(job.id, 'downloading', 10, "Starting download...");
+            this.logger.info(`Starting download for object ID: ${objectId}`);
             
             // Track what was successfully downloaded
             let objectDetailsRetrieved = object.description !== "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.";
@@ -48,39 +53,42 @@ export class MMFDownloader {
             let filesDownloaded = false;
             let errorMessages = [];
             
-            this.downloadManager.updateJob(job.id, 'downloading', 20);
+            this.downloadManager.updateJob(job.id, 'downloading', 20, "Creating folders...");
 
             // Create folder structure - even with minimal object
             const objectFolder = await this.createObjectFolder(object);
             
-            this.downloadManager.updateJob(job.id, 'downloading', 30);
+            let mainLocalImagePath: string | undefined;
+
+            // Download images if enabled and we have object details
+            if (this.settings.downloadImages && objectDetailsRetrieved) {
+                try {
+                    this.logger.info("Attempting to download images...");
+                    this.downloadManager.updateJob(job.id, 'downloading', 50, "Downloading images...");
+                    mainLocalImagePath = await this.downloadImages(job, object, objectFolder);
+                    imagesDownloaded = true;
+                } catch (imageError) {
+                    this.logger.error(`Error downloading images: ${imageError.message}`);
+                    errorMessages.push(`Images download error: ${imageError.message}`);
+                }
+            }
+
+            this.downloadManager.updateJob(job.id, 'downloading', 30, "Creating metadata files...");
             // Create metadata markdown file with what we have
-            await this.createMetadataFile(object, objectFolder);
+            await this.createMetadataFile(object, objectFolder, mainLocalImagePath);
             await this.saveMetadataFile(object, objectFolder);
             
-            this.downloadManager.updateJob(job.id, 'downloading', 40);
+            this.downloadManager.updateJob(job.id, 'downloading', 40, "Checking API details...");
             // If we couldn't even get object details and strict mode is on, stop here
             if (!objectDetailsRetrieved && this.settings.strictApiMode) {
                 throw new Error(`Failed to retrieve object details for ID ${objectId}`);
             }
             
-            // Download images if enabled and we have object details
-            if (this.settings.downloadImages && objectDetailsRetrieved) {
-                try {
-                    console.log("Attempting to download images...");
-                    await this.downloadImages(object, objectFolder);
-                    imagesDownloaded = true;
-                } catch (imageError) {
-                    console.error("Error downloading images:", imageError);
-                    errorMessages.push(`Images download error: ${imageError.message}`);
-                }
-            }
-            
-            this.downloadManager.updateJob(job.id, 'downloading', 60);
+            this.downloadManager.updateJob(job.id, 'downloading', 60, "Downloading files...");
             // Download files if enabled
             if (this.settings.downloadFiles) {
                 try {
-                    console.log("Attempting to download 3D model files...");
+                    this.logger.info("Attempting to download 3D model files...");
 
                     // First check if the object already contains file URLs
                     let objectWithFiles = object;
@@ -96,25 +104,25 @@ export class MMFDownloader {
                     // Ensure files is an array before proceeding
                     if (!objectWithFiles.files || !objectWithFiles.files.items || !Array.isArray(objectWithFiles.files.items)) {
                         objectWithFiles.files = { total_count: 0, items: [] };
-                        console.warn("Files property is not an array, initializing as empty array");
+                        this.logger.warn("Files property is not an array, initializing as empty array");
                     }
                     
                     // Try to download files or at least create instructions
-                    await this.downloadFiles(objectWithFiles, objectFolder);
+                    await this.downloadFiles(job, objectWithFiles, objectFolder);
                     filesDownloaded = true;
                 } catch (filesError) {
-                    console.error("Error downloading files:", filesError);
+                    this.logger.error(`Error downloading files: ${filesError.message}`);
                     errorMessages.push(`Files download error: ${filesError.message}`);
                     
                     // Create fallback download instructions even if everything fails
                     try {
                         await this.createEmergencyInstructions(objectId, object, objectFolder, filesError);
                     } catch (instructionsError) {
-                        console.error("Failed to create instructions file:", instructionsError);
+                        this.logger.error(`Failed to create instructions file: ${instructionsError.message}`);
                     }
                 }
             }
-            this.downloadManager.updateJob(job.id, 'downloading', 80);
+            this.downloadManager.updateJob(job.id, 'downloading', 80, "Finalizing...");
             
             // Prepare completion message
             let status = "";
@@ -126,20 +134,21 @@ export class MMFDownloader {
                 status = "minimal info only";
             }
             
-            let message = `Processed "${object.name}" (${status})`;
+            let message = `Processed "${object.name}" (${status})
+`;
             
             if (errorMessages.length > 0) {
                 message += " with errors";
-                console.warn("Download completed with errors:", errorMessages);
-                this.downloadManager.updateJob(job.id, 'failed', 100, errorMessages.join('\n'));
+                this.logger.warn(`Download completed with errors: ${errorMessages.join(', ')}`);
+                this.downloadManager.updateJob(job.id, 'failed', 100, "Completed with errors", errorMessages.join('\n'));
             } else {
-                this.downloadManager.updateJob(job.id, 'completed', 100);
+                this.downloadManager.updateJob(job.id, 'completed', 100, "Completed");
             }
             
             new Notice(message);
         } catch (error) {
-            console.error(`Error downloading object ${objectId}:`, error);
-            this.downloadManager.updateJob(job.id, 'failed', 100, error.message);
+            this.logger.error(`Error downloading object ${objectId}: ${error.message}`);
+            this.downloadManager.updateJob(job.id, 'failed', 100, "Failed", error.message);
             
             // Create a minimal placeholder and instructions if possible
             try {
@@ -177,7 +186,7 @@ export class MMFDownloader {
                 
                 await this.app.vault.create(instructionsPath, content);
             } catch (emergencyError) {
-                console.error("Failed to create emergency instructions:", emergencyError);
+                this.logger.error(`Failed to create emergency instructions: ${emergencyError.message}`);
             }
             
             throw new Error(`Failed to download object: ${error.message}`);
@@ -229,7 +238,7 @@ export class MMFDownloader {
             instructionsContent += `Try updating the plugin or checking the [MyMiniFactory API documentation](https://www.myminifactory.com/settings/developer) for more information.`;
             
             await this.app.vault.create(instructionsPath, instructionsContent);
-            console.log("Created emergency download instructions file");
+            this.logger.info("Created emergency download instructions file");
     }
     
     private async createObjectFolder(object: MMFObject): Promise<string> {
@@ -256,10 +265,11 @@ export class MMFDownloader {
         return objectPath;
     }
     
-    private async createMetadataFile(object: MMFObject, folderPath: string): Promise<void> {
+    private async createMetadataFile(object: MMFObject, folderPath: string, mainLocalImagePath?: string): Promise<void> {
         const filePath = normalizePath(`${folderPath}/README.md`);
         
         const frontmatter: any = {
+            name: object.name,
             site_url: object.url,
             description: object.description,
             tags: object.tags || [],
@@ -267,6 +277,9 @@ export class MMFDownloader {
 
         if (object.designer) {
             frontmatter.designer = object.designer.name;
+        }
+        if (mainLocalImagePath) {
+            frontmatter.main_image = mainLocalImagePath;
         }
 
         const frontmatterString = stringifyYaml(frontmatter);
@@ -332,7 +345,7 @@ export class MMFDownloader {
     private getFileExtensionFromUrl(url: string | undefined): string {
         // Return default extension if URL is undefined
         if (!url) {
-            console.log("Warning: Image URL is undefined, using default .jpg extension");
+            this.logger.warn("Image URL is undefined, using default .jpg extension");
             return ".jpg";
         }
     
@@ -344,10 +357,10 @@ export class MMFDownloader {
             }
             
             // For URLs without extensions or unexpected formats, use a default
-            console.log(`No file extension found in URL: ${url}, using default .jpg extension`);
+            this.logger.warn(`No file extension found in URL: ${url}, using default .jpg extension`);
             return ".jpg";
         } catch (error) {
-            console.error(`Error extracting file extension from URL: ${url}`, error);
+            this.logger.error(`Error extracting file extension from URL: ${url}, ${error.message}`);
             return ".jpg";
         }
     }
@@ -390,8 +403,8 @@ export class MMFDownloader {
     }
     
     
-    private async downloadImages(object: MMFObject, folderPath: string): Promise<void> {
-        console.log("Processing object for images:", object.id, object.name);
+    private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string): Promise<string | undefined> {
+        this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
         
         // Create images folder
         const imagesPath = normalizePath(`${folderPath}/images`);
@@ -399,55 +412,63 @@ export class MMFDownloader {
             await this.app.vault.createFolder(imagesPath);
         }
         
+        let mainLocalImagePath: string | undefined;
+
         // Check if images array exists and handle it
         if (object.images && object.images.length > 0) {
             // The API returns images as an array of complex objects
             const imageArray = Array.isArray(object.images) ? object.images : [object.images];
             
-            console.log(`Found ${imageArray.length} images in the object`);
+            this.logger.info(`Found ${imageArray.length} images in the object`);
             
             if (imageArray.length === 0) {
-                console.log("Empty images array for object", object.id);
+                this.logger.info(`Empty images array for object ${object.id}`);
             } else {
                 // Download each image
                 for (let i = 0; i < imageArray.length; i++) {
                     const image = imageArray[i];
-                    console.log(`Processing image ${i+1}/${imageArray.length}`);
+                    this.logger.info(`Processing image ${i+1}/${imageArray.length}`);
+                    this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i+1)/imageArray.length) * 10), `Downloading image ${i+1}/${imageArray.length}`);
                     
                     const imageUrl = this.getImageUrl(image);
                     
                     if (!imageUrl) {
-                        console.log(`Could not determine URL for image ${i+1}`);
+                        this.logger.warn(`Could not determine URL for image ${i+1}`);
                         continue;
                     }
                     
-                    await this.downloadSingleImage(imageUrl, imagesPath, `image_${i+1}`);
+                    const downloadedPath = await this.downloadSingleImage(imageUrl, imagesPath, `image_${i+1}`);
+                    if (downloadedPath && !mainLocalImagePath) {
+                        mainLocalImagePath = downloadedPath;
+                    }
                 }
             }
         } else {
-            console.log("No images array found for object", object.id);
+            this.logger.info(`No images array found for object ${object.id}`);
         }
         
         // If we still have no images, create a placeholder
         const files = await this.app.vault.adapter.list(imagesPath);
         if (files && files.files.length === 0) {
-            console.log("No images were downloaded, creating placeholder");
+            this.logger.info("No images were downloaded, creating placeholder");
             const placeholderPath = normalizePath(`${imagesPath}/no_images.md`);
             const placeholderContent = `# No Images Available\n\nNo images could be downloaded for this object.\n\nPlease visit the original page to view images:\n${object.url}`;
             await this.app.vault.create(placeholderPath, placeholderContent);
         }
+
+        return mainLocalImagePath;
     }
     
     /**
      * Download a single image given its URL
      */
-    private async downloadSingleImage(url: string, folderPath: string, baseFileName: string): Promise<boolean> {
+    private async downloadSingleImage(url: string, folderPath: string, baseFileName: string): Promise<string | undefined> {
         try {
             const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
             const filePath = normalizePath(`${folderPath}/${fileName}`);
             
             new Notice(`Downloading ${baseFileName}...`);
-            console.log(`Downloading image from URL: ${url}`);
+            this.logger.info(`Downloading image from URL: ${url}`);
             
             const response = await requestUrl({
                 url: url,
@@ -461,25 +482,25 @@ export class MMFDownloader {
             
             if (response.status !== 200) {
                 new Notice(`Failed to download image: ${response.status}`);
-                return false;
+                return undefined;
             }
             
             await this.app.vault.createBinary(filePath, response.arrayBuffer);
-            console.log(`Successfully downloaded ${baseFileName}`);
-            return true;
+            this.logger.info(`Successfully downloaded ${baseFileName}`);
+            return filePath;
         } catch (error) {
             new Notice(`Error downloading ${baseFileName}: ${error.message}`);
-            console.error(`Error downloading image ${url}:`, error);
+            this.logger.error(`Error downloading image ${url}: ${error.message}`);
             
             // Create a placeholder file with instructions if download fails
             const placeholderPath = normalizePath(`${folderPath}/${baseFileName}_error.md`);
             const placeholderContent = `# Download Error\n\nFailed to download image from: ${url}\n\nError: ${error.message}\n\nPlease visit the MyMiniFactory website to view this image.`;
             await this.app.vault.create(placeholderPath, placeholderContent);
-            return false;
+            return undefined;
         }
     }
     
-    private async downloadFiles(object: MMFObject, folderPath: string): Promise<void> {
+    private async downloadFiles(job: DownloadJob, object: MMFObject, folderPath: string): Promise<void> {
         // Create files folder
         const filesPath = normalizePath(`${folderPath}/files`);
         if (!await this.folderExists(filesPath)) {
@@ -496,7 +517,7 @@ export class MMFDownloader {
         // Download each file
         for (const item of object.files.items) {
             if (!item.download_url) {
-                console.error(`No download URL for file: ${item.filename}`);
+                this.logger.error(`No download URL for file: ${item.filename}`);
                 continue;
             }
             
@@ -504,6 +525,7 @@ export class MMFDownloader {
             if (this.settings.useDirectDownload) {
                 try {
                     new Notice(`Downloading file: ${item.filename}...`);
+                    this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
                     
                     const response = await requestUrl({
                         url: item.download_url,
@@ -526,20 +548,18 @@ export class MMFDownloader {
                     new Notice(`Successfully downloaded ${item.filename}`);
                     
                     downloadedFiles++;
-                    const progress = 60 + Math.round((downloadedFiles / totalFiles) * 20);
-                    this.downloadManager.updateJob(object.id.toString(), 'downloading', progress);
 
                     if (item.filename.toLowerCase().endsWith('.zip')) {
                         new Notice(`Extracting ${item.filename}...`);
-                        this.downloadManager.updateJob(object.id.toString(), 'extracting', progress);
+                        this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
                         await this.extractZipFile(arrayBuffer, filesPath);
                     }
                 } catch (error) {
                     new Notice(`Error downloading ${item.filename}: ${error.message}`);
-                    console.error(`Error downloading file ${item.filename}:`, error);
+                    this.logger.error(`Error downloading file ${item.filename}: ${error.message}`);
                 }
             } else {
-				console.log(`Skipping direct download for file ${item.filename}`);
+				this.logger.info(`Skipping direct download for file ${item.filename}`);
 			}
         }
     }
@@ -568,7 +588,7 @@ export class MMFDownloader {
             new Notice('Extraction complete.');
         } catch (error) {
             new Notice(`Failed to extract zip file: ${error.message}`);
-            console.error('Error extracting zip file:', error);
+            this.logger.error(`Failed to extract zip file: ${error.message}`);
         }
     }
     
@@ -598,4 +618,3 @@ export class MMFDownloader {
         return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
     }
 }
-

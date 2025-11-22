@@ -77,7 +77,7 @@ export class DownloadManagerModal extends Modal {
 
             new Setting(jobEl)
                 .setName(job.object.name)
-                .setDesc(job.status.charAt(0).toUpperCase() + job.status.slice(1));
+                .setDesc(job.progressMessage);
 
             const progressBar = jobEl.createEl('progress', {
                 attr: {

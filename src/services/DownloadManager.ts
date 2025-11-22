@@ -5,6 +5,7 @@ export interface DownloadJob {
     object: MMFObject;
     status: 'pending' | 'downloading' | 'extracting' | 'completed' | 'failed';
     progress: number; // 0-100
+    progressMessage: string;
     error?: string;
 }
 
@@ -28,17 +29,19 @@ export class DownloadManager {
             object,
             status: 'pending',
             progress: 0,
+            progressMessage: 'Queued',
         };
         this.jobs.set(job.id, job);
         this.notifyListeners();
         return job;
     }
 
-    public updateJob(id: string, status: DownloadJob['status'], progress: number, error?: string) {
+    public updateJob(id: string, status: DownloadJob['status'], progress: number, progressMessage: string, error?: string) {
         const job = this.jobs.get(id);
         if (job) {
             job.status = status;
             job.progress = progress;
+            job.progressMessage = progressMessage;
             if (error) {
                 job.error = error;
             }
