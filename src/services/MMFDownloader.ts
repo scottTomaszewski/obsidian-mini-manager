@@ -3,176 +3,185 @@ import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
 import * as JSZip from "jszip";
+import { DownloadManager } from "./DownloadManager";
 
 export class MMFDownloader {
     private app: App;
     private settings: MiniManagerSettings;
     private apiService: MMFApiService;
+    private downloadManager: DownloadManager;
     
     constructor(app: App, settings: MiniManagerSettings) {
         this.app = app;
         this.settings = settings;
         this.apiService = new MMFApiService(settings);
+        this.downloadManager = DownloadManager.getInstance();
     }
     
     async downloadObject(objectId: string): Promise<void> {
+        let object: MMFObject;
         try {
-                console.log(`Starting download for object ID: ${objectId}`);
-                
-                // Track what was successfully downloaded
-                let objectDetailsRetrieved = false;
-                let imagesDownloaded = false;
-                let filesDownloaded = false;
-                let errorMessages = [];
-                
-                // Get object details
-                let object: MMFObject;
-                try {
-                    object = await this.apiService.getObjectById(objectId);
-                    console.log(`Retrieved object details for "${object.name}"`);
-                    objectDetailsRetrieved = true;
-                } catch (objectError) {
-                    console.error(`Failed to get object details: ${objectError.message}`);
-                    errorMessages.push(`Object retrieval error: ${objectError.message}`);
-                    
-                    // Create a minimal object with the ID for fallback
-                    object = {
-                        id: objectId,
-                        name: `MyMiniFactory Object ${objectId}`,
-                        description: "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.",
-                        url: `https://www.myminifactory.com/object/${objectId}`,
-                        images: [],
-                        files: {
-                            total_count: 0,
-                            items: []
-                        }
-                    };
+            object = await this.apiService.getObjectById(objectId);
+        } catch (objectError) {
+            object = {
+                id: objectId,
+                name: `MyMiniFactory Object ${objectId}`,
+                description: "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.",
+                url: `https://www.myminifactory.com/object/${objectId}`,
+                images: [],
+                files: {
+                    total_count: 0,
+                    items: []
                 }
-                
-                // Create folder structure - even with minimal object
-                const objectFolder = await this.createObjectFolder(object);
-                
-                // Create metadata markdown file with what we have
-                await this.createMetadataFile(object, objectFolder);
-                
-                // If we couldn't even get object details and strict mode is on, stop here
-                if (!objectDetailsRetrieved && this.settings.strictApiMode) {
-                    throw new Error(`Failed to retrieve object details for ID ${objectId}`);
-                }
-                
-                // Download images if enabled and we have object details
-                if (this.settings.downloadImages && objectDetailsRetrieved) {
-                    try {
-                        console.log("Attempting to download images...");
-                        await this.downloadImages(object, objectFolder);
-                        imagesDownloaded = true;
-                    } catch (imageError) {
-                        console.error("Error downloading images:", imageError);
-                        errorMessages.push(`Images download error: ${imageError.message}`);
-                    }
-                }
-                
-                // Download files if enabled
-                if (this.settings.downloadFiles) {
-                    try {
-                        console.log("Attempting to download 3D model files...");
-
-                        // First check if the object already contains file URLs
-                        let objectWithFiles = object;
-                        
-                        // Make sure we have a web URL for manual downloads
-                        if (!objectWithFiles.url) {
-                            const slug = objectWithFiles.name 
-                                ? encodeURIComponent(objectWithFiles.name.toLowerCase().replace(/\s+/g, '-'))
-                                : objectId;
-                            objectWithFiles.url = `https://www.myminifactory.com/object/${slug}-${objectId}`;
-                        }
-                        
-                        // Ensure files is an array before proceeding
-                        if (!objectWithFiles.files || !objectWithFiles.files.items || !Array.isArray(objectWithFiles.files.items)) {
-                            objectWithFiles.files = { total_count: 0, items: [] };
-                            console.warn("Files property is not an array, initializing as empty array");
-                        }
-                        
-                        // Try to download files or at least create instructions
-                        await this.downloadFiles(objectWithFiles, objectFolder);
-                        filesDownloaded = true;
-                    } catch (filesError) {
-                        console.error("Error downloading files:", filesError);
-                        errorMessages.push(`Files download error: ${filesError.message}`);
-                        
-                        // Create fallback download instructions even if everything fails
-                        try {
-                            await this.createEmergencyInstructions(objectId, object, objectFolder, filesError);
-                        } catch (instructionsError) {
-                            console.error("Failed to create instructions file:", instructionsError);
-                        }
-                    }
-                }
-                
-                // Prepare completion message
-                let status = "";
-                if (objectDetailsRetrieved) {
-                    status = "details";
-                    if (imagesDownloaded) status += " + images";
-                    if (filesDownloaded) status += " + files";
-                } else {
-                    status = "minimal info only";
-                }
-                
-                let message = `Processed "${object.name}" (${status})`;
-                
-                if (errorMessages.length > 0) {
-                    message += " with errors";
-                    console.warn("Download completed with errors:", errorMessages);
-                }
-                
-                new Notice(message);
-            } catch (error) {
-                console.error(`Error downloading object ${objectId}:`, error);
-                
-                // Create a minimal placeholder and instructions if possible
-                try {
-                    const baseFolder = normalizePath(this.settings.downloadPath);
-                    const objectFolder = normalizePath(`${baseFolder}/object_${objectId}`);
-                    
-                    // Create the folder structure if it doesn't exist
-                    if (!await this.folderExists(baseFolder)) {
-                        await this.app.vault.createFolder(baseFolder);
-                    }
-                    
-                    if (!await this.folderExists(objectFolder)) {
-                        await this.app.vault.createFolder(objectFolder);
-                    }
-                    
-                    // Create emergency instructions
-                    const instructionsPath = normalizePath(`${objectFolder}/API_ERROR.md`);
-                    let content = `# MyMiniFactory API Error\n\n`;
-                    content += `## Error Details\n\n`;
-                    content += `Failed to download object ID: ${objectId}\n\n`;
-                    content += `Error: ${error.message}\n\n`;
-                    content += `Time: ${new Date().toLocaleString()}\n\n`;
-                    content += `## Possible Solutions\n\n`;
-                    content += `1. **Check your API key** in the plugin settings\n`;
-                    content += `2. **Verify the object ID** is correct: ${objectId}\n`;
-                    content += `3. **Try again later** as this might be a temporary API issue\n`;
-                    content += `4. **Visit the object directly** on MyMiniFactory: [Object ${objectId}](https://www.myminifactory.com/object/${objectId})\n`;
-                    content += `5. **Check for plugin updates** as the API might have changed\n\n`;
-                    content += `## Manual Download\n\n`;
-                    content += `If the API continues to fail, you can manually download the object:\n\n`;
-                    content += `1. Visit [MyMiniFactory](https://www.myminifactory.com)\n`;
-                    content += `2. Search for the object ID: ${objectId}\n`;
-                    content += `3. Download the files manually\n`;
-                    content += `4. Place them in the files subfolder of this directory\n`;
-                    
-                    await this.app.vault.create(instructionsPath, content);
-                } catch (emergencyError) {
-                    console.error("Failed to create emergency instructions:", emergencyError);
-                }
-                
-                throw new Error(`Failed to download object: ${error.message}`);
-            }
+            };
         }
+
+        const job = this.downloadManager.addJob(object);
+
+        try {
+            this.downloadManager.updateJob(job.id, 'downloading', 10);
+            console.log(`Starting download for object ID: ${objectId}`);
+            
+            // Track what was successfully downloaded
+            let objectDetailsRetrieved = !!object.createdAt;
+            let imagesDownloaded = false;
+            let filesDownloaded = false;
+            let errorMessages = [];
+            
+            this.downloadManager.updateJob(job.id, 'downloading', 20);
+
+            // Create folder structure - even with minimal object
+            const objectFolder = await this.createObjectFolder(object);
+            
+            this.downloadManager.updateJob(job.id, 'downloading', 30);
+            // Create metadata markdown file with what we have
+            await this.createMetadataFile(object, objectFolder);
+            
+            this.downloadManager.updateJob(job.id, 'downloading', 40);
+            // If we couldn't even get object details and strict mode is on, stop here
+            if (!objectDetailsRetrieved && this.settings.strictApiMode) {
+                throw new Error(`Failed to retrieve object details for ID ${objectId}`);
+            }
+            
+            // Download images if enabled and we have object details
+            if (this.settings.downloadImages && objectDetailsRetrieved) {
+                try {
+                    console.log("Attempting to download images...");
+                    await this.downloadImages(object, objectFolder);
+                    imagesDownloaded = true;
+                } catch (imageError) {
+                    console.error("Error downloading images:", imageError);
+                    errorMessages.push(`Images download error: ${imageError.message}`);
+                }
+            }
+            
+            this.downloadManager.updateJob(job.id, 'downloading', 60);
+            // Download files if enabled
+            if (this.settings.downloadFiles) {
+                try {
+                    console.log("Attempting to download 3D model files...");
+
+                    // First check if the object already contains file URLs
+                    let objectWithFiles = object;
+                    
+                    // Make sure we have a web URL for manual downloads
+                    if (!objectWithFiles.url) {
+                        const slug = objectWithFiles.name 
+                            ? encodeURIComponent(objectWithFiles.name.toLowerCase().replace(/\s+/g, '-'))
+                            : objectId;
+                        objectWithFiles.url = `https://www.myminifactory.com/object/${slug}-${objectId}`;
+                    }
+                    
+                    // Ensure files is an array before proceeding
+                    if (!objectWithFiles.files || !objectWithFiles.files.items || !Array.isArray(objectWithFiles.files.items)) {
+                        objectWithFiles.files = { total_count: 0, items: [] };
+                        console.warn("Files property is not an array, initializing as empty array");
+                    }
+                    
+                    // Try to download files or at least create instructions
+                    await this.downloadFiles(objectWithFiles, objectFolder);
+                    filesDownloaded = true;
+                } catch (filesError) {
+                    console.error("Error downloading files:", filesError);
+                    errorMessages.push(`Files download error: ${filesError.message}`);
+                    
+                    // Create fallback download instructions even if everything fails
+                    try {
+                        await this.createEmergencyInstructions(objectId, object, objectFolder, filesError);
+                    } catch (instructionsError) {
+                        console.error("Failed to create instructions file:", instructionsError);
+                    }
+                }
+            }
+            this.downloadManager.updateJob(job.id, 'downloading', 80);
+            
+            // Prepare completion message
+            let status = "";
+            if (objectDetailsRetrieved) {
+                status = "details";
+                if (imagesDownloaded) status += " + images";
+                if (filesDownloaded) status += " + files";
+            } else {
+                status = "minimal info only";
+            }
+            
+            let message = `Processed "${object.name}" (${status})`;
+            
+            if (errorMessages.length > 0) {
+                message += " with errors";
+                console.warn("Download completed with errors:", errorMessages);
+                this.downloadManager.updateJob(job.id, 'failed', 100, errorMessages.join('\n'));
+            } else {
+                this.downloadManager.updateJob(job.id, 'completed', 100);
+            }
+            
+            new Notice(message);
+        } catch (error) {
+            console.error(`Error downloading object ${objectId}:`, error);
+            this.downloadManager.updateJob(job.id, 'failed', 100, error.message);
+            
+            // Create a minimal placeholder and instructions if possible
+            try {
+                const baseFolder = normalizePath(this.settings.downloadPath);
+                const objectFolder = normalizePath(`${baseFolder}/object_${objectId}`);
+                
+                // Create the folder structure if it doesn't exist
+                if (!await this.folderExists(baseFolder)) {
+                    await this.app.vault.createFolder(baseFolder);
+                }
+                
+                if (!await this.folderExists(objectFolder)) {
+                    await this.app.vault.createFolder(objectFolder);
+                }
+                
+                // Create emergency instructions
+                const instructionsPath = normalizePath(`${objectFolder}/API_ERROR.md`);
+                let content = `# MyMiniFactory API Error\n\n`;
+                content += `## Error Details\n\n`;
+                content += `Failed to download object ID: ${objectId}\n\n`;
+                content += `Error: ${error.message}\n\n`;
+                content += `Time: ${new Date().toLocaleString()}\n\n`;
+                content += `## Possible Solutions\n\n`;
+                content += `1. **Check your API key** in the plugin settings\n`;
+                content += `2. **Verify the object ID** is correct: ${objectId}\n`;
+                content += `3. **Try again later** as this might be a temporary API issue\n`;
+                content += `4. **Visit the object directly** on MyMiniFactory: [Object ${objectId}](https://www.myminifactory.com/object/${objectId})\n`;
+                content += `5. **Check for plugin updates** as the API might have changed\n\n`;
+                content += `## Manual Download\n\n`;
+                content += `If the API continues to fail, you can manually download the object:\n\n`;
+                content += `1. Visit [MyMiniFactory](https://www.myminifactory.com)\n`;
+                content += `2. Search for the object ID: ${objectId}\n`;
+                content += `3. Download the files manually\n`;
+                content += `4. Place them in the files subfolder of this directory\n`;
+                
+                await this.app.vault.create(instructionsPath, content);
+            } catch (emergencyError) {
+                console.error("Failed to create emergency instructions:", emergencyError);
+            }
+            
+            throw new Error(`Failed to download object: ${error.message}`);
+        }
+    }
         
         /**
          * Create emergency download instructions when everything else fails
@@ -466,6 +475,9 @@ export class MMFDownloader {
             return;
         }
 
+        const totalFiles = object.files.items.length;
+        let downloadedFiles = 0;
+
         // Download each file
         for (const item of object.files.items) {
             if (!item.download_url) {
@@ -497,9 +509,14 @@ export class MMFDownloader {
                     const arrayBuffer = response.arrayBuffer;
                     await this.app.vault.createBinary(filePath, arrayBuffer);
                     new Notice(`Successfully downloaded ${item.filename}`);
+                    
+                    downloadedFiles++;
+                    const progress = 60 + Math.round((downloadedFiles / totalFiles) * 20);
+                    this.downloadManager.updateJob(object.id.toString(), 'downloading', progress);
 
                     if (item.filename.toLowerCase().endsWith('.zip')) {
                         new Notice(`Extracting ${item.filename}...`);
+                        this.downloadManager.updateJob(object.id.toString(), 'extracting', progress);
                         await this.extractZipFile(arrayBuffer, filesPath);
                     }
                 } catch (error) {

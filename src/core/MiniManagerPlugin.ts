@@ -7,6 +7,7 @@ import {
 import { MMFApiService } from '../services/MMFApiService';
 import { MMFDownloader } from '../services/MMFDownloader';
 import { MMFObject } from '../models/MMFObject';
+import { DownloadManagerModal } from '../ui/DownloadManagerModal';
 
 export default class MiniManagerPlugin extends Plugin {
 	settings: MiniManagerSettings;
@@ -43,6 +44,14 @@ export default class MiniManagerPlugin extends Plugin {
 			name: 'Download MyMiniFactory Object by ID',
 			callback: () => {
 				new MMFDownloadModal(this).open();
+			}
+		});
+
+		this.addCommand({
+			id: 'open-download-manager',
+			name: 'Open Download Manager',
+			callback: () => {
+				new DownloadManagerModal(this.app, this).open();
 			}
 		});
 
