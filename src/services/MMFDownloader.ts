@@ -43,7 +43,7 @@ export class MMFDownloader {
             console.log(`Starting download for object ID: ${objectId}`);
             
             // Track what was successfully downloaded
-            let objectDetailsRetrieved = !!object.createdAt;
+            let objectDetailsRetrieved = object.description !== "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.";
             let imagesDownloaded = false;
             let filesDownloaded = false;
             let errorMessages = [];
