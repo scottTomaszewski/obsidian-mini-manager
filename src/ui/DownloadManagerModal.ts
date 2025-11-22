@@ -1,13 +1,13 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Notice, Setting } from 'obsidian';
 import { DownloadManager, DownloadJob } from '../services/DownloadManager';
 import MiniManagerPlugin from '../core/MiniManagerPlugin';
-import { MMFDownloadModal } from './MMFDownloadModal';
 
 export class DownloadManagerModal extends Modal {
     private downloadManager: DownloadManager;
     private jobsContainer: HTMLElement;
     private listener: (jobs: DownloadJob[]) => void;
     private plugin: MiniManagerPlugin;
+    private objectId: string = "";
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
@@ -20,11 +20,31 @@ export class DownloadManagerModal extends Modal {
         contentEl.createEl('h2', { text: 'Download Manager' });
 
         new Setting(contentEl)
-            .addButton(button => button
-                .setButtonText('Add New Download')
-                .onClick(() => {
-                    new MMFDownloadModal(this.app, this.plugin).open();
+            .setName('New Download')
+            .setDesc('Enter a MyMiniFactory object ID to start a new download.')
+            .addText(text => text
+                .setPlaceholder('Enter object ID')
+                .onChange(value => {
+                    this.objectId = value;
                 }))
+            .addButton(button => button
+                .setButtonText('Download')
+                .onClick(async () => {
+                    if (!this.objectId) {
+                        new Notice('Please enter an object ID');
+                        return;
+                    }
+                    try {
+                        new Notice(`Downloading object ${this.objectId}...`);
+                        await this.plugin.downloader.downloadObject(this.objectId);
+                        new Notice(`Successfully added object ${this.objectId} to the download queue.`);
+                    } catch (error) {
+                        new Notice(`Error: ${error.message}`);
+                        console.error(error);
+                    }
+                }));
+
+        new Setting(contentEl)
             .addButton(button => button
                 .setButtonText('Clear Completed')
                 .onClick(() => {

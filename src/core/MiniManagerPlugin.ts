@@ -7,7 +7,6 @@ import {
 import { MMFApiService } from '../services/MMFApiService';
 import { MMFDownloader } from '../services/MMFDownloader';
 import { DownloadManagerModal } from '../ui/DownloadManagerModal';
-import { MMFDownloadModal } from '../ui/MMFDownloadModal';
 import { MMFSearchModal } from '../ui/MMFSearchModal';
 
 export default class MiniManagerPlugin extends Plugin {
@@ -36,15 +35,6 @@ export default class MiniManagerPlugin extends Plugin {
 			name: 'Search MyMiniFactory Objects',
 			callback: () => {
 				new MMFSearchModal(this.app, this).open();
-			}
-		});
-
-		// Register download by ID command
-		this.addCommand({
-			id: 'download-mmf-object-by-id',
-			name: 'Download MyMiniFactory Object by ID',
-			callback: () => {
-				new MMFDownloadModal(this.app, this).open();
 			}
 		});
 
