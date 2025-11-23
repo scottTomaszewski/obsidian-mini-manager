@@ -2,11 +2,13 @@ import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFObject} from "../models/MMFObject";
 import { requestUrl } from "obsidian";
 import { LoggerService } from "./LoggerService";
+import { OAuth2Service } from "./OAuth2Service";
 
 export class MMFApiService {
     private apiBaseUrl = "https://www.myminifactory.com/api/v2";
     private settings: MiniManagerSettings;
     private logger: LoggerService;
+    private oauth2Service: OAuth2Service;
     
     // Add debugging info to track API requests and responses
     private debug = true; // Set to false in production
@@ -14,9 +16,10 @@ export class MMFApiService {
     // Maximum number of retries for transient errors
     private maxRetries = 2;
     
-    constructor(settings: MiniManagerSettings, logger: LoggerService) {
+    constructor(settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.settings = settings;
         this.logger = logger;
+        this.oauth2Service = oauth2Service;
     }
     
     /**
@@ -24,9 +27,20 @@ export class MMFApiService {
      * Includes retry logic with exponential backoff for transient errors
      */
     private async apiRequest(endpoint: string, method: string = 'GET', retries = 0): Promise<any> {
-        // Add API key as query parameter
-        const separator = endpoint.includes('?') ? '&' : '?';
-        const url = `${this.apiBaseUrl}${endpoint}${separator}key=${this.settings.mmfApiKey}`;
+        let url: string;
+        const headers: Record<string, string> = {
+            'accept': 'application/json'
+        };
+
+        if (this.settings.oauthToken) {
+            const accessToken = await this.oauth2Service.getAccessToken();
+            headers['Authorization'] = `Bearer ${accessToken}`;
+            url = `${this.apiBaseUrl}${endpoint}`;
+        } else {
+            const separator = endpoint.includes('?') ? '&' : '?';
+            url = `${this.apiBaseUrl}${endpoint}${separator}key=${this.settings.mmfApiKey}`;
+        }
+        
         this.logger.info(`Making API request to: ${url}`);
         
         try {
@@ -42,9 +56,7 @@ export class MMFApiService {
             const response = await requestUrl({
                 url: url,
                 method: method,
-                headers: {
-                    'accept': 'application/json'
-                },
+                headers: headers,
                 contentType: 'application/json',
                 throw: false // Don't throw on non-200 responses, we'll handle them manually
             });
@@ -56,10 +68,10 @@ export class MMFApiService {
                 
                 switch (response.status) {
                     case 401:
-                        errorMessage = "Authentication failed: please check your API key";
+                        errorMessage = "Authentication failed: please check your API key or OAuth token";
                         break;
                     case 403:
-                        errorMessage = "Access forbidden: your API key may not have the required permissions";
+                        errorMessage = "Access forbidden: your API key or OAuth token may not have the required permissions";
                         break;
                     case 404:
                         errorMessage = `Resource not found: ${endpoint}`;
@@ -191,16 +203,19 @@ export class MMFApiService {
      * Check if the API key is valid by making a simple API request
      */
     async validateApiKey(): Promise<boolean> {
-        if (!this.settings.mmfApiKey) {
+        if (!this.settings.mmfApiKey && !this.settings.oauthToken) {
+            this.logger.warn("API Key and OAuth Token are both missing. Cannot validate API connection.");
             return false;
         }
         
         try {
             // Make a simple request to validate the API key
+            // If oauthToken is available, it will be used by apiRequest
             await this.apiRequest('/objects?per_page=1');
+            this.logger.info("API key/OAuth token validation successful.");
             return true;
         } catch (error) {
-            this.logger.error(`API key validation failed: ${error.message}`);
+            this.logger.error(`API key/OAuth token validation failed: ${error.message}`);
             return false;
         }
     }

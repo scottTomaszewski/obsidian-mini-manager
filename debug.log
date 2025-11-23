@@ -325,3 +325,182 @@
 2025-11-22T20:48:15.240Z [ERROR] No download URL for file: MaleNorse02.zip
 2025-11-22T20:48:15.240Z [ERROR] No download URL for file: FemaleNorse02.zip
 2025-11-22T20:48:15.241Z [ERROR] No download URL for file: Modular.zip
+2025-11-22T21:27:15.395Z [INFO] Attempting to retrieve object 407061
+2025-11-22T21:27:15.395Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/407061?key=39aa3e2d-ee2b-4cc5-bc94-a152875478a3
+2025-11-22T21:27:15.395Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/407061?key=39aa3e2d-ee2b-4cc5-bc94-a152875478a3
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-22T21:27:15.649Z [INFO] Starting download for object ID: 407061
+2025-11-22T21:27:15.653Z [INFO] Attempting to download images...
+2025-11-22T21:27:15.653Z [INFO] Processing object for images: 407061 [Free] [Humblewood] Raccoonfolk Thief
+2025-11-22T21:27:15.654Z [INFO] Found 15 images in the object
+2025-11-22T21:27:15.654Z [INFO] Processing image 1/15
+2025-11-22T21:27:15.654Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-MMF02.jpg
+2025-11-22T21:27:16.029Z [INFO] Successfully downloaded image_1
+2025-11-22T21:27:16.029Z [INFO] Processing image 2/15
+2025-11-22T21:27:16.030Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (0).jpg
+2025-11-22T21:27:16.194Z [INFO] Successfully downloaded image_2
+2025-11-22T21:27:16.194Z [INFO] Processing image 3/15
+2025-11-22T21:27:16.195Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (D).jpg
+2025-11-22T21:27:16.366Z [INFO] Successfully downloaded image_3
+2025-11-22T21:27:16.366Z [INFO] Processing image 4/15
+2025-11-22T21:27:16.367Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (1).jpg
+2025-11-22T21:27:16.616Z [INFO] Successfully downloaded image_4
+2025-11-22T21:27:16.616Z [INFO] Processing image 5/15
+2025-11-22T21:27:16.616Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (2).jpg
+2025-11-22T21:27:16.866Z [INFO] Successfully downloaded image_5
+2025-11-22T21:27:16.866Z [INFO] Processing image 6/15
+2025-11-22T21:27:16.867Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (3).jpg
+2025-11-22T21:27:17.012Z [INFO] Successfully downloaded image_6
+2025-11-22T21:27:17.012Z [INFO] Processing image 7/15
+2025-11-22T21:27:17.013Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief (4).jpg
+2025-11-22T21:27:17.169Z [INFO] Successfully downloaded image_7
+2025-11-22T21:27:17.169Z [INFO] Processing image 8/15
+2025-11-22T21:27:17.169Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_C (1).jpg
+2025-11-22T21:27:17.338Z [INFO] Successfully downloaded image_8
+2025-11-22T21:27:17.338Z [INFO] Processing image 9/15
+2025-11-22T21:27:17.339Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_ZB (1).jpg
+2025-11-22T21:27:17.637Z [INFO] Successfully downloaded image_9
+2025-11-22T21:27:17.638Z [INFO] Processing image 10/15
+2025-11-22T21:27:17.638Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_ZB (2).jpg
+2025-11-22T21:27:17.770Z [INFO] Successfully downloaded image_10
+2025-11-22T21:27:17.770Z [INFO] Processing image 11/15
+2025-11-22T21:27:17.770Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_ZB (3).jpg
+2025-11-22T21:27:18.047Z [INFO] Successfully downloaded image_11
+2025-11-22T21:27:18.047Z [INFO] Processing image 12/15
+2025-11-22T21:27:18.048Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_ZB (4).jpg
+2025-11-22T21:27:18.255Z [INFO] Successfully downloaded image_12
+2025-11-22T21:27:18.255Z [INFO] Processing image 13/15
+2025-11-22T21:27:18.256Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-Raccoon_Thief_ZBC (1).jpg
+2025-11-22T21:27:18.406Z [INFO] Successfully downloaded image_13
+2025-11-22T21:27:18.406Z [INFO] Processing image 14/15
+2025-11-22T21:27:18.407Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-2410_ch_raccoonfolk_thief.jpg
+2025-11-22T21:27:18.548Z [INFO] Successfully downloaded image_14
+2025-11-22T21:27:18.548Z [INFO] Processing image 15/15
+2025-11-22T21:27:18.549Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/66d1a8b8f117b9.58758488/images/1000X1000-2410_ch_raccoonfolk_thief_b.jpg
+2025-11-22T21:27:18.696Z [INFO] Successfully downloaded image_15
+2025-11-22T21:27:18.705Z [INFO] Attempting to download 3D model files...
+2025-11-22T21:27:43.916Z [INFO] Attempting to retrieve object 475077
+2025-11-22T21:27:43.916Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/475077?key=39aa3e2d-ee2b-4cc5-bc94-a152875478a3
+2025-11-22T21:27:43.916Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/475077?key=39aa3e2d-ee2b-4cc5-bc94-a152875478a3
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-22T21:27:44.010Z [INFO] Starting download for object ID: 475077
+2025-11-22T21:27:44.012Z [INFO] Attempting to download images...
+2025-11-22T21:27:44.013Z [INFO] Processing object for images: 475077 Displacer Kittens (2 Models)
+2025-11-22T21:27:44.014Z [INFO] Found 13 images in the object
+2025-11-22T21:27:44.014Z [INFO] Processing image 1/13
+2025-11-22T21:27:44.014Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-MMF10.jpg
+2025-11-22T21:27:44.299Z [INFO] Successfully downloaded image_1
+2025-11-22T21:27:44.299Z [INFO] Processing image 2/13
+2025-11-22T21:27:44.299Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (0).jpg
+2025-11-22T21:27:44.578Z [INFO] Successfully downloaded image_2
+2025-11-22T21:27:44.578Z [INFO] Processing image 3/13
+2025-11-22T21:27:44.579Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (D).jpg
+2025-11-22T21:27:44.786Z [INFO] Successfully downloaded image_3
+2025-11-22T21:27:44.786Z [INFO] Processing image 4/13
+2025-11-22T21:27:44.786Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (DS).jpg
+2025-11-22T21:27:44.980Z [INFO] Successfully downloaded image_4
+2025-11-22T21:27:44.980Z [INFO] Processing image 5/13
+2025-11-22T21:27:44.980Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (1).jpg
+2025-11-22T21:27:45.166Z [INFO] Successfully downloaded image_5
+2025-11-22T21:27:45.166Z [INFO] Processing image 6/13
+2025-11-22T21:27:45.167Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (2).jpg
+2025-11-22T21:27:45.347Z [INFO] Successfully downloaded image_6
+2025-11-22T21:27:45.347Z [INFO] Processing image 7/13
+2025-11-22T21:27:45.348Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittensB (1).jpg
+2025-11-22T21:27:45.935Z [INFO] Successfully downloaded image_7
+2025-11-22T21:27:45.935Z [INFO] Processing image 8/13
+2025-11-22T21:27:45.935Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (1).jpg
+2025-11-22T21:27:46.106Z [INFO] Successfully downloaded image_8
+2025-11-22T21:27:46.106Z [INFO] Processing image 9/13
+2025-11-22T21:27:46.107Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (2).jpg
+2025-11-22T21:27:46.241Z [INFO] Successfully downloaded image_9
+2025-11-22T21:27:46.241Z [INFO] Processing image 10/13
+2025-11-22T21:27:46.241Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (3).jpg
+2025-11-22T21:27:46.424Z [INFO] Successfully downloaded image_10
+2025-11-22T21:27:46.424Z [INFO] Processing image 11/13
+2025-11-22T21:27:46.424Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kitten_stalking.jpg
+2025-11-22T21:27:46.648Z [INFO] Successfully downloaded image_11
+2025-11-22T21:27:46.648Z [INFO] Processing image 12/13
+2025-11-22T21:27:46.648Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kitten_sitting.jpg
+2025-11-22T21:27:46.944Z [INFO] Successfully downloaded image_12
+2025-11-22T21:27:46.944Z [INFO] Processing image 13/13
+2025-11-22T21:27:46.944Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kittens_b.jpg
+2025-11-22T21:27:47.102Z [INFO] Successfully downloaded image_13
+2025-11-22T21:27:47.110Z [INFO] Attempting to download 3D model files...
+2025-11-22T21:27:47.115Z [ERROR] No download URL for file: BTB_58_25-04_Displacer_Kittens.zip
+2025-11-23T00:03:26.406Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:03:29.786Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:03:45.358Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:03:49.450Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:05:27.186Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:05:54.488Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:06:35.779Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:06:37.363Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:12:07.837Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:12:09.621Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:13:00.695Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:20:06.551Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:20:51.338Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:20:51.978Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:22:06.376Z [ERROR] Error exchanging code for token: Request failed, status 401
+2025-11-23T00:29:10.888Z [ERROR] Error parsing MMF redirect URL: Failed to construct 'URL': Invalid URL
+2025-11-23T00:33:53.922Z [ERROR] Error parsing MMF redirect URL: Failed to construct 'URL': Invalid URL
+2025-11-23T00:34:28.758Z [INFO] Successfully stored MyMiniFactory access token from redirect URL
+2025-11-23T00:35:08.132Z [INFO] Attempting to retrieve object 475077
+2025-11-23T00:35:08.133Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/475077
+2025-11-23T00:35:08.133Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/475077
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-23T00:35:08.372Z [INFO] Starting download for object ID: 475077
+2025-11-23T00:35:08.376Z [INFO] Attempting to download images...
+2025-11-23T00:35:08.376Z [INFO] Processing object for images: 475077 Displacer Kittens (2 Models)
+2025-11-23T00:35:08.379Z [INFO] Found 13 images in the object
+2025-11-23T00:35:08.379Z [INFO] Processing image 1/13
+2025-11-23T00:35:08.379Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-MMF10.jpg
+2025-11-23T00:35:08.690Z [INFO] Successfully downloaded image_1
+2025-11-23T00:35:08.690Z [INFO] Processing image 2/13
+2025-11-23T00:35:08.691Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (0).jpg
+2025-11-23T00:35:08.896Z [INFO] Successfully downloaded image_2
+2025-11-23T00:35:08.896Z [INFO] Processing image 3/13
+2025-11-23T00:35:08.897Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (D).jpg
+2025-11-23T00:35:09.163Z [INFO] Successfully downloaded image_3
+2025-11-23T00:35:09.163Z [INFO] Processing image 4/13
+2025-11-23T00:35:09.164Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (DS).jpg
+2025-11-23T00:35:09.381Z [INFO] Successfully downloaded image_4
+2025-11-23T00:35:09.381Z [INFO] Processing image 5/13
+2025-11-23T00:35:09.381Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (1).jpg
+2025-11-23T00:35:09.567Z [INFO] Successfully downloaded image_5
+2025-11-23T00:35:09.567Z [INFO] Processing image 6/13
+2025-11-23T00:35:09.568Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens (2).jpg
+2025-11-23T00:35:09.764Z [INFO] Successfully downloaded image_6
+2025-11-23T00:35:09.764Z [INFO] Processing image 7/13
+2025-11-23T00:35:09.764Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittensB (1).jpg
+2025-11-23T00:35:09.936Z [INFO] Successfully downloaded image_7
+2025-11-23T00:35:09.936Z [INFO] Processing image 8/13
+2025-11-23T00:35:09.937Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (1).jpg
+2025-11-23T00:35:10.177Z [INFO] Successfully downloaded image_8
+2025-11-23T00:35:10.177Z [INFO] Processing image 9/13
+2025-11-23T00:35:10.178Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (2).jpg
+2025-11-23T00:35:10.350Z [INFO] Successfully downloaded image_9
+2025-11-23T00:35:10.350Z [INFO] Processing image 10/13
+2025-11-23T00:35:10.350Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-DisplacerKittens_ZB (3).jpg
+2025-11-23T00:35:10.526Z [INFO] Successfully downloaded image_10
+2025-11-23T00:35:10.527Z [INFO] Processing image 11/13
+2025-11-23T00:35:10.527Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kitten_stalking.jpg
+2025-11-23T00:35:10.692Z [INFO] Successfully downloaded image_11
+2025-11-23T00:35:10.692Z [INFO] Processing image 12/13
+2025-11-23T00:35:10.693Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kitten_sitting.jpg
+2025-11-23T00:35:10.894Z [INFO] Successfully downloaded image_12
+2025-11-23T00:35:10.894Z [INFO] Processing image 13/13
+2025-11-23T00:35:10.894Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/67c5dd8ea35426.79011565/images/1000X1000-2504_ch_displacer_kittens_b.jpg
+2025-11-23T00:35:11.059Z [INFO] Successfully downloaded image_13
+2025-11-23T00:35:11.072Z [INFO] Attempting to download 3D model files...
+2025-11-23T00:35:13.653Z [ERROR] Failed to extract zip file: Can't find end of central directory : is this a zip file ? If it is, see https://stuk.github.io/jszip/documentation/howto/read_zip.html

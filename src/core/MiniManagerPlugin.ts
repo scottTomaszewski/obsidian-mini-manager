@@ -10,6 +10,7 @@ import { DownloadManagerModal } from '../ui/DownloadManagerModal';
 import { MMFSearchModal } from '../ui/MMFSearchModal';
 import { SearchService } from '../services/SearchService';
 import { LoggerService } from '../services/LoggerService';
+import { OAuth2Service } from '../services/OAuth2Service';
 
 export default class MiniManagerPlugin extends Plugin {
 	settings: MiniManagerSettings;
@@ -17,6 +18,7 @@ export default class MiniManagerPlugin extends Plugin {
 	downloader: MMFDownloader;
 	searchService: SearchService;
 	logger: LoggerService;
+	oauth2Service: OAuth2Service;
 
 	async onload() {
 		console.log('Loading Mini Manager plugin');
@@ -26,8 +28,9 @@ export default class MiniManagerPlugin extends Plugin {
 		await this.loadSettings();
 
 		// Initialize services
-		this.apiService = new MMFApiService(this.settings, this.logger);
-		this.downloader = new MMFDownloader(this.app, this.settings, this.logger);
+		this.oauth2Service = new OAuth2Service(this.settings, this.logger);
+		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
+		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service);
 		this.searchService = new SearchService(this.app, this.settings);
 		await this.searchService.buildIndex();
 

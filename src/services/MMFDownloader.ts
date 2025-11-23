@@ -5,6 +5,7 @@ import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
 import * as JSZip from "jszip";
 import { DownloadManager, DownloadJob } from "./DownloadManager";
 import { LoggerService } from "./LoggerService";
+import { OAuth2Service } from "./OAuth2Service"; // Import OAuth2Service
 
 export class MMFDownloader {
     private app: App;
@@ -13,11 +14,11 @@ export class MMFDownloader {
     private downloadManager: DownloadManager;
     private logger: LoggerService;
     
-    constructor(app: App, settings: MiniManagerSettings, logger: LoggerService) {
+    constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.app = app;
         this.settings = settings;
         this.logger = logger;
-        this.apiService = new MMFApiService(settings, logger);
+        this.apiService = new MMFApiService(settings, logger, oauth2Service); // Pass oauth2Service
         this.downloadManager = DownloadManager.getInstance();
     }
     
