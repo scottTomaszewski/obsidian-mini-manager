@@ -49,6 +49,10 @@ export class DownloadManager {
         }
     }
 
+    public getJob(id: string): DownloadJob | undefined {
+        return this.jobs.get(id);
+    }
+
     public getJobs(): DownloadJob[] {
         return Array.from(this.jobs.values());
     }

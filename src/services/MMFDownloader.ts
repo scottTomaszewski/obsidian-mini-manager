@@ -14,17 +14,60 @@ export class MMFDownloader {
     private downloadManager: DownloadManager;
     private logger: LoggerService;
     private oauth2Service: OAuth2Service;
-    
+    private downloadQueue: string[] = [];
+    private activeDownloads: number = 0;
+
     constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.app = app;
         this.settings = settings;
         this.logger = logger;
-        this.oauth2Service = oauth2Service; // Store oauth2Service
-        this.apiService = new MMFApiService(settings, logger, oauth2Service); // Pass oauth2Service
+        this.oauth2Service = oauth2Service;
+        this.apiService = new MMFApiService(settings, logger, oauth2Service);
         this.downloadManager = DownloadManager.getInstance();
     }
-    
-    async downloadObject(objectId: string): Promise<void> {
+
+    public async downloadObject(objectId: string): Promise<void> {
+        this.downloadQueue.push(objectId);
+        // Create a temporary object to add to the download manager
+        const tempObject: MMFObject = {
+            id: objectId,
+            name: `Queued Object ${objectId}`,
+            description: '',
+            url: '',
+            images: [],
+            files: {
+                total_count: 0,
+                items: []
+            }
+        };
+        const job = this.downloadManager.addJob(tempObject);
+        this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
+        this._processQueue();
+    }
+
+    private async _processQueue(): Promise<void> {
+        if (this.activeDownloads >= this.settings.maxConcurrentDownloads) {
+            return;
+        }
+
+        if (this.downloadQueue.length === 0) {
+            return;
+        }
+
+        this.activeDownloads++;
+        const objectId = this.downloadQueue.shift();
+
+        try {
+            await this._downloadObjectInternal(objectId);
+        } catch (error) {
+            this.logger.error(`Failed to download object ${objectId} in queue: ${error.message}`);
+        } finally {
+            this.activeDownloads--;
+            this._processQueue();
+        }
+    }
+
+    private async _downloadObjectInternal(objectId: string): Promise<void> {
         let object: MMFObject;
         try {
             this.logger.info(`Attempting to retrieve object ${objectId}`);
@@ -44,8 +87,8 @@ export class MMFDownloader {
             };
         }
 
-        const job = this.downloadManager.addJob(object);
-
+        const job = this.downloadManager.getJob(objectId) || this.downloadManager.addJob(object);
+        
         try {
             this.downloadManager.updateJob(job.id, 'downloading', 10, "Starting download...");
             this.logger.info(`Starting download for object ID: ${objectId}`);

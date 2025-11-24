@@ -12,6 +12,7 @@ export interface MiniManagerSettings {
 	useDirectDownload: boolean;
 	strictApiMode: boolean;
 	maxRetries: number;
+	maxConcurrentDownloads: number;
 }
 
 export const DEFAULT_SETTINGS: MiniManagerSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: MiniManagerSettings = {
 	useDirectDownload: false,
 	strictApiMode: false,
 	maxRetries: 2,
+	maxConcurrentDownloads: 3,
 };
 
 export class MiniManagerSettingsTab extends PluginSettingTab {
@@ -213,6 +215,19 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					this.plugin.settings.maxRetries = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Max Concurrent Downloads')
+			.setDesc('Number of models to download at the same time.')
+			.addSlider(slider => slider
+				.setLimits(1, 10, 1)
+				.setValue(this.plugin.settings.maxConcurrentDownloads)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.maxConcurrentDownloads = value;
 					await this.plugin.saveSettings();
 				})
 			);
