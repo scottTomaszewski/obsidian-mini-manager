@@ -13,11 +13,13 @@ export class MMFDownloader {
     private apiService: MMFApiService;
     private downloadManager: DownloadManager;
     private logger: LoggerService;
+    private oauth2Service: OAuth2Service;
     
     constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.app = app;
         this.settings = settings;
         this.logger = logger;
+        this.oauth2Service = oauth2Service; // Store oauth2Service
         this.apiService = new MMFApiService(settings, logger, oauth2Service); // Pass oauth2Service
         this.downloadManager = DownloadManager.getInstance();
     }
@@ -528,14 +530,22 @@ export class MMFDownloader {
                     new Notice(`Downloading file: ${item.filename}...`);
                     this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
                     
+                    const accessToken = await this.oauth2Service.getAccessToken();
+                    const headers: Record<string, string> = {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                    };
+
+                    let url = item.download_url;
+                    if (accessToken) {
+                        url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
+                    }
+
                     const response = await requestUrl({
-                        url: item.download_url,
+                        url: url,
                         method: 'GET',
-                        headers: {
-                            'Cache-Control': 'no-cache',
-                            'Pragma': 'no-cache',
-                            'Expires': '0',
-                        }
+                        headers: headers
                     });
                     
                     if (response.status !== 200) {
@@ -553,7 +563,13 @@ export class MMFDownloader {
                     if (item.filename.toLowerCase().endsWith('.zip')) {
                         new Notice(`Extracting ${item.filename}...`);
                         this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
-                        await this.extractZipFile(arrayBuffer, filesPath);
+                        try {
+                            await this.extractZipFile(arrayBuffer, filesPath);
+                        } catch (zipError) {
+                            this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
+                            this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(arrayBuffer.slice(0, 500))}`);
+                            throw zipError; // Re-throw to be caught by the outer catch
+                        }
                     }
                 } catch (error) {
                     new Notice(`Error downloading ${item.filename}: ${error.message}`);
