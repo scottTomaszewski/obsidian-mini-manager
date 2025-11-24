@@ -1366,3 +1366,614 @@
 2025-11-24T15:29:10.692Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-2511_ch_bearfolk_bard_b.jpg
 2025-11-24T15:29:10.736Z [INFO] Successfully downloaded image_14
 2025-11-24T15:29:10.751Z [INFO] Attempting to download 3D model files...
+2025-11-24T15:45:41.150Z [INFO] Loaded OAuth token from settings
+2025-11-24T15:46:04.209Z [INFO] Attempting to retrieve object 669418
+2025-11-24T15:46:04.209Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669418
+2025-11-24T15:46:04.209Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669418
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:46:04.317Z [WARN] Retryable error encountered, retrying in 1000ms...
+2025-11-24T15:46:05.318Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669418
+2025-11-24T15:46:05.318Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669418
+                    Method: GET
+                    Attempt: 2/3
+                
+2025-11-24T15:46:05.365Z [WARN] Retryable error encountered, retrying in 2000ms...
+2025-11-24T15:46:07.365Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669418
+2025-11-24T15:46:07.365Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669418
+                    Method: GET
+                    Attempt: 3/3
+                
+2025-11-24T15:46:07.410Z [ERROR] API request failed after 3 attempts: Server error (503): the API service might be experiencing issues
+2025-11-24T15:46:07.410Z [ERROR] Error getting object 669418: API request failed: Server error (503): the API service might be experiencing issues
+2025-11-24T15:46:07.411Z [WARN] Returning fallback object for ID 669418 due to API error
+2025-11-24T15:46:07.411Z [INFO] Starting download for object ID: 669418
+2025-11-24T15:46:07.420Z [INFO] Attempting to download images...
+2025-11-24T15:46:07.435Z [INFO] Processing object for images: 669418 Object 669418
+2025-11-24T15:46:07.450Z [INFO] No images array found for object 669418
+2025-11-24T15:46:07.451Z [INFO] No images were downloaded, creating placeholder
+2025-11-24T15:46:07.516Z [INFO] Attempting to download 3D model files...
+2025-11-24T15:47:18.306Z [INFO] Attempting to retrieve object 669419
+2025-11-24T15:47:18.306Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669419
+2025-11-24T15:47:18.307Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669419
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:47:19.961Z [INFO] Starting download for object ID: 669419
+2025-11-24T15:47:19.966Z [INFO] Attempting to download images...
+2025-11-24T15:47:19.966Z [INFO] Processing object for images: 669419 Goatfolk Vendor
+2025-11-24T15:47:19.971Z [INFO] Found 15 images in the object
+2025-11-24T15:47:19.971Z [INFO] Processing image 1/15
+2025-11-24T15:47:19.971Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-MMF03.jpg
+2025-11-24T15:47:21.722Z [INFO] Successfully downloaded image_1
+2025-11-24T15:47:21.722Z [INFO] Processing image 2/15
+2025-11-24T15:47:21.722Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (0).jpg
+2025-11-24T15:47:23.169Z [INFO] Successfully downloaded image_2
+2025-11-24T15:47:23.169Z [INFO] Processing image 3/15
+2025-11-24T15:47:23.170Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (D).jpg
+2025-11-24T15:47:23.305Z [INFO] Successfully downloaded image_3
+2025-11-24T15:47:23.305Z [INFO] Processing image 4/15
+2025-11-24T15:47:23.306Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (1).jpg
+2025-11-24T15:47:23.437Z [INFO] Successfully downloaded image_4
+2025-11-24T15:47:23.437Z [INFO] Processing image 5/15
+2025-11-24T15:47:23.437Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (2).jpg
+2025-11-24T15:47:23.988Z [INFO] Successfully downloaded image_5
+2025-11-24T15:47:23.989Z [INFO] Processing image 6/15
+2025-11-24T15:47:23.989Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (3).jpg
+2025-11-24T15:47:24.114Z [INFO] Successfully downloaded image_6
+2025-11-24T15:47:24.114Z [INFO] Processing image 7/15
+2025-11-24T15:47:24.114Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (4).jpg
+2025-11-24T15:47:24.190Z [INFO] Successfully downloaded image_7
+2025-11-24T15:47:24.191Z [INFO] Processing image 8/15
+2025-11-24T15:47:24.191Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor (5).jpg
+2025-11-24T15:47:24.294Z [INFO] Successfully downloaded image_8
+2025-11-24T15:47:24.294Z [INFO] Processing image 9/15
+2025-11-24T15:47:24.295Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor_ZB (1).jpg
+2025-11-24T15:47:24.406Z [INFO] Successfully downloaded image_9
+2025-11-24T15:47:24.406Z [INFO] Processing image 10/15
+2025-11-24T15:47:24.406Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor_ZB (2).jpg
+2025-11-24T15:47:24.521Z [INFO] Successfully downloaded image_10
+2025-11-24T15:47:24.522Z [INFO] Processing image 11/15
+2025-11-24T15:47:24.522Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor_ZB (3).jpg
+2025-11-24T15:47:24.588Z [INFO] Successfully downloaded image_11
+2025-11-24T15:47:24.588Z [INFO] Processing image 12/15
+2025-11-24T15:47:24.589Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor_ZB (4).jpg
+2025-11-24T15:47:24.683Z [INFO] Successfully downloaded image_12
+2025-11-24T15:47:24.684Z [INFO] Processing image 13/15
+2025-11-24T15:47:24.684Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-Goatfolk_Vendor_ZB (5).jpg
+2025-11-24T15:47:24.784Z [INFO] Successfully downloaded image_13
+2025-11-24T15:47:24.784Z [INFO] Processing image 14/15
+2025-11-24T15:47:24.785Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-2511_ch_goatfolk_vendor.jpg
+2025-11-24T15:47:24.859Z [INFO] Successfully downloaded image_14
+2025-11-24T15:47:24.859Z [INFO] Processing image 15/15
+2025-11-24T15:47:24.860Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d1745a920c07.64133525/images/1000X1000-2511_ch_goatfolk_vendor_b.jpg
+2025-11-24T15:47:25.026Z [INFO] Successfully downloaded image_15
+2025-11-24T15:47:25.040Z [INFO] Attempting to download 3D model files...
+2025-11-24T15:47:25.097Z [ERROR] Error downloading file BTB_65_25-11_Goatfolk_Vendor.zip: Request failed, status 503
+2025-11-24T15:47:31.064Z [INFO] Attempting to retrieve object 669418
+2025-11-24T15:47:31.064Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669418
+2025-11-24T15:47:31.064Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669418
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:47:32.766Z [INFO] Starting download for object ID: 669418
+2025-11-24T15:47:32.766Z [INFO] Attempting to download images...
+2025-11-24T15:47:32.767Z [INFO] Processing object for images: 669418 Bearfolk Bard
+2025-11-24T15:47:32.767Z [INFO] Found 14 images in the object
+2025-11-24T15:47:32.767Z [INFO] Processing image 1/14
+2025-11-24T15:47:32.767Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-MMF02.jpg
+2025-11-24T15:47:32.980Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-MMF02.jpg: File already exists.
+2025-11-24T15:47:32.985Z [INFO] Processing image 2/14
+2025-11-24T15:47:32.986Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (0).jpg
+2025-11-24T15:47:33.097Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (0).jpg: File already exists.
+2025-11-24T15:47:33.103Z [INFO] Processing image 3/14
+2025-11-24T15:47:33.104Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (D).jpg
+2025-11-24T15:47:33.165Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (D).jpg: File already exists.
+2025-11-24T15:47:33.169Z [INFO] Processing image 4/14
+2025-11-24T15:47:33.169Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (1).jpg
+2025-11-24T15:47:33.254Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (1).jpg: File already exists.
+2025-11-24T15:47:33.257Z [INFO] Processing image 5/14
+2025-11-24T15:47:33.257Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (2).jpg
+2025-11-24T15:47:33.419Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (2).jpg: File already exists.
+2025-11-24T15:47:33.424Z [INFO] Processing image 6/14
+2025-11-24T15:47:33.424Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (3).jpg
+2025-11-24T15:47:33.524Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (3).jpg: File already exists.
+2025-11-24T15:47:33.527Z [INFO] Processing image 7/14
+2025-11-24T15:47:33.527Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (4).jpg
+2025-11-24T15:47:33.592Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard (4).jpg: File already exists.
+2025-11-24T15:47:33.595Z [INFO] Processing image 8/14
+2025-11-24T15:47:33.595Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (1).jpg
+2025-11-24T15:47:33.641Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (1).jpg: File already exists.
+2025-11-24T15:47:33.645Z [INFO] Processing image 9/14
+2025-11-24T15:47:33.646Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (2).jpg
+2025-11-24T15:47:33.698Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (2).jpg: File already exists.
+2025-11-24T15:47:33.704Z [INFO] Processing image 10/14
+2025-11-24T15:47:33.705Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (3).jpg
+2025-11-24T15:47:33.752Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (3).jpg: File already exists.
+2025-11-24T15:47:33.768Z [INFO] Processing image 11/14
+2025-11-24T15:47:33.768Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (4).jpg
+2025-11-24T15:47:33.831Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (4).jpg: File already exists.
+2025-11-24T15:47:33.837Z [INFO] Processing image 12/14
+2025-11-24T15:47:33.837Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (5).jpg
+2025-11-24T15:47:33.895Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-Bearfolk_Bard_ZB (5).jpg: File already exists.
+2025-11-24T15:47:33.907Z [INFO] Processing image 13/14
+2025-11-24T15:47:33.907Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-2511_ch_bearfolk_bard.jpg
+2025-11-24T15:47:33.983Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-2511_ch_bearfolk_bard.jpg: File already exists.
+2025-11-24T15:47:33.991Z [INFO] Processing image 14/14
+2025-11-24T15:47:33.992Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-2511_ch_bearfolk_bard_b.jpg
+2025-11-24T15:47:34.209Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d173c7407e84.59235299/images/1000X1000-2511_ch_bearfolk_bard_b.jpg: File already exists.
+2025-11-24T15:47:34.224Z [ERROR] Error downloading object 669418: File already exists.
+2025-11-24T15:47:34.233Z [ERROR] Failed to download object 669418 in queue: Failed to download object: File already exists.
+2025-11-24T15:52:35.855Z [INFO] Attempting to retrieve object 669402
+2025-11-24T15:52:35.856Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669402
+2025-11-24T15:52:35.856Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669402
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:52:37.850Z [INFO] Starting download for object ID: 669402
+2025-11-24T15:52:37.850Z [INFO] Attempting to download images...
+2025-11-24T15:52:37.850Z [INFO] Processing object for images: 669402 [PDF Only] (Painting Guide) Crocodilian Warden
+2025-11-24T15:52:37.850Z [INFO] Found 9 images in the object
+2025-11-24T15:52:37.850Z [INFO] Processing image 1/9
+2025-11-24T15:52:37.850Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-CrocodilianWarden (0).jpg
+2025-11-24T15:52:38.230Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-CrocodilianWarden (0).jpg: File already exists.
+2025-11-24T15:52:38.235Z [INFO] Processing image 2/9
+2025-11-24T15:52:38.235Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (0).JPG
+2025-11-24T15:52:38.406Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (0).JPG: File already exists.
+2025-11-24T15:52:38.410Z [INFO] Processing image 3/9
+2025-11-24T15:52:38.411Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (1).JPG
+2025-11-24T15:52:38.553Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (1).JPG: File already exists.
+2025-11-24T15:52:38.559Z [INFO] Processing image 4/9
+2025-11-24T15:52:38.560Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (2).JPG
+2025-11-24T15:52:38.724Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (2).JPG: File already exists.
+2025-11-24T15:52:38.730Z [INFO] Processing image 5/9
+2025-11-24T15:52:38.731Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (3).JPG
+2025-11-24T15:52:38.854Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (3).JPG: File already exists.
+2025-11-24T15:52:38.860Z [INFO] Processing image 6/9
+2025-11-24T15:52:38.860Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (4).JPG
+2025-11-24T15:52:38.975Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (4).JPG: File already exists.
+2025-11-24T15:52:38.979Z [INFO] Processing image 7/9
+2025-11-24T15:52:38.979Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (5).JPG
+2025-11-24T15:52:39.105Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (5).JPG: File already exists.
+2025-11-24T15:52:39.112Z [INFO] Processing image 8/9
+2025-11-24T15:52:39.112Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (6).JPG
+2025-11-24T15:52:39.237Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (6).JPG: File already exists.
+2025-11-24T15:52:39.240Z [INFO] Processing image 9/9
+2025-11-24T15:52:39.240Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (7).JPG
+2025-11-24T15:52:39.376Z [ERROR] Error downloading image https://dl2.myminifactory.com/object-assets/68d16fb49bd868.97233869/images/1000X1000-Crocodilian (7).JPG: File already exists.
+2025-11-24T15:52:39.389Z [ERROR] Error downloading object 669402: File already exists.
+2025-11-24T15:52:39.393Z [ERROR] Failed to download object 669402 in queue: Failed to download object: File already exists.
+2025-11-24T15:53:01.111Z [INFO] Attempting to retrieve object 669400
+2025-11-24T15:53:01.111Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/669400
+2025-11-24T15:53:01.111Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/669400
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:53:02.125Z [INFO] Starting download for object ID: 669400
+2025-11-24T15:53:02.132Z [INFO] Attempting to download images...
+2025-11-24T15:53:02.132Z [INFO] Processing object for images: 669400 November 2025 Painting Guides
+2025-11-24T15:53:02.139Z [INFO] Found 10 images in the object
+2025-11-24T15:53:02.139Z [INFO] Processing image 1/10
+2025-11-24T15:53:02.140Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-CrocodilianWarden (0).jpg
+2025-11-24T15:53:02.369Z [INFO] Successfully downloaded image_1
+2025-11-24T15:53:02.369Z [INFO] Processing image 2/10
+2025-11-24T15:53:02.370Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-_PaintingGuides.jpg
+2025-11-24T15:53:02.940Z [INFO] Successfully downloaded image_2
+2025-11-24T15:53:02.940Z [INFO] Processing image 3/10
+2025-11-24T15:53:02.940Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (0).JPG
+2025-11-24T15:53:03.079Z [INFO] Successfully downloaded image_3
+2025-11-24T15:53:03.079Z [INFO] Processing image 4/10
+2025-11-24T15:53:03.080Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (1).JPG
+2025-11-24T15:53:03.205Z [INFO] Successfully downloaded image_4
+2025-11-24T15:53:03.205Z [INFO] Processing image 5/10
+2025-11-24T15:53:03.205Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (2).JPG
+2025-11-24T15:53:03.336Z [INFO] Successfully downloaded image_5
+2025-11-24T15:53:03.336Z [INFO] Processing image 6/10
+2025-11-24T15:53:03.337Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (3).JPG
+2025-11-24T15:53:03.466Z [INFO] Successfully downloaded image_6
+2025-11-24T15:53:03.467Z [INFO] Processing image 7/10
+2025-11-24T15:53:03.467Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (4).JPG
+2025-11-24T15:53:03.654Z [INFO] Successfully downloaded image_7
+2025-11-24T15:53:03.654Z [INFO] Processing image 8/10
+2025-11-24T15:53:03.654Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (5).JPG
+2025-11-24T15:53:03.799Z [INFO] Successfully downloaded image_8
+2025-11-24T15:53:03.799Z [INFO] Processing image 9/10
+2025-11-24T15:53:03.799Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (6).JPG
+2025-11-24T15:53:03.939Z [INFO] Successfully downloaded image_9
+2025-11-24T15:53:03.939Z [INFO] Processing image 10/10
+2025-11-24T15:53:03.939Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68d16e59bb9f46.80701233/images/1000X1000-Crocodilian (7).JPG
+2025-11-24T15:53:04.062Z [INFO] Successfully downloaded image_10
+2025-11-24T15:53:04.072Z [INFO] Attempting to download 3D model files...
+2025-11-24T15:53:10.974Z [INFO] Attempting to retrieve object 657714
+2025-11-24T15:53:10.974Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/657714
+2025-11-24T15:53:10.974Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/657714
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:53:11.237Z [INFO] Starting download for object ID: 657714
+2025-11-24T15:53:11.247Z [INFO] Attempting to download images...
+2025-11-24T15:53:11.247Z [INFO] Processing object for images: 657714 Serena, the Human Inquisitor (2 Versions) [NSFW]
+2025-11-24T15:53:11.259Z [INFO] Found 21 images in the object
+2025-11-24T15:53:11.259Z [INFO] Processing image 1/21
+2025-11-24T15:53:11.260Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (MMF).jpg
+2025-11-24T15:53:11.584Z [INFO] Successfully downloaded image_1
+2025-11-24T15:53:11.584Z [INFO] Processing image 2/21
+2025-11-24T15:53:11.585Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (0).jpg
+2025-11-24T15:53:11.700Z [INFO] Successfully downloaded image_2
+2025-11-24T15:53:11.700Z [INFO] Processing image 3/21
+2025-11-24T15:53:11.700Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (D).jpg
+2025-11-24T15:53:11.856Z [INFO] Successfully downloaded image_3
+2025-11-24T15:53:11.856Z [INFO] Processing image 4/21
+2025-11-24T15:53:11.857Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (1).jpg
+2025-11-24T15:53:11.985Z [INFO] Successfully downloaded image_4
+2025-11-24T15:53:11.986Z [INFO] Processing image 5/21
+2025-11-24T15:53:11.986Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (2).jpg
+2025-11-24T15:53:12.106Z [INFO] Successfully downloaded image_5
+2025-11-24T15:53:12.106Z [INFO] Processing image 6/21
+2025-11-24T15:53:12.106Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (3).jpg
+2025-11-24T15:53:12.237Z [INFO] Successfully downloaded image_6
+2025-11-24T15:53:12.237Z [INFO] Processing image 7/21
+2025-11-24T15:53:12.237Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane (4).jpg
+2025-11-24T15:53:12.330Z [INFO] Successfully downloaded image_7
+2025-11-24T15:53:12.330Z [INFO] Processing image 8/21
+2025-11-24T15:53:12.330Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_E (1).jpg
+2025-11-24T15:53:12.451Z [INFO] Successfully downloaded image_8
+2025-11-24T15:53:12.452Z [INFO] Processing image 9/21
+2025-11-24T15:53:12.452Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_E (2).jpg
+2025-11-24T15:53:12.591Z [INFO] Successfully downloaded image_9
+2025-11-24T15:53:12.591Z [INFO] Processing image 10/21
+2025-11-24T15:53:12.592Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_E (4).jpg
+2025-11-24T15:53:12.691Z [INFO] Successfully downloaded image_10
+2025-11-24T15:53:12.691Z [INFO] Processing image 11/21
+2025-11-24T15:53:12.691Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZB (1).jpg
+2025-11-24T15:53:12.794Z [INFO] Successfully downloaded image_11
+2025-11-24T15:53:12.794Z [INFO] Processing image 12/21
+2025-11-24T15:53:12.795Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZB (2).jpg
+2025-11-24T15:53:12.947Z [INFO] Successfully downloaded image_12
+2025-11-24T15:53:12.947Z [INFO] Processing image 13/21
+2025-11-24T15:53:12.947Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZB (3).jpg
+2025-11-24T15:53:13.094Z [INFO] Successfully downloaded image_13
+2025-11-24T15:53:13.094Z [INFO] Processing image 14/21
+2025-11-24T15:53:13.094Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZB (4).jpg
+2025-11-24T15:53:13.158Z [INFO] Successfully downloaded image_14
+2025-11-24T15:53:13.158Z [INFO] Processing image 15/21
+2025-11-24T15:53:13.159Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZBE (1).jpg
+2025-11-24T15:53:13.330Z [INFO] Successfully downloaded image_15
+2025-11-24T15:53:13.330Z [INFO] Processing image 16/21
+2025-11-24T15:53:13.330Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZBE (2).jpg
+2025-11-24T15:53:13.389Z [INFO] Successfully downloaded image_16
+2025-11-24T15:53:13.390Z [INFO] Processing image 17/21
+2025-11-24T15:53:13.390Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-Whitemane_ZBE (4).jpg
+2025-11-24T15:53:13.462Z [INFO] Successfully downloaded image_17
+2025-11-24T15:53:13.462Z [INFO] Processing image 18/21
+2025-11-24T15:53:13.462Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-2510_ch_e_human_inquisitor.jpg
+2025-11-24T15:53:13.549Z [INFO] Successfully downloaded image_18
+2025-11-24T15:53:13.550Z [INFO] Processing image 19/21
+2025-11-24T15:53:13.550Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-2510_ch_e_human_inquisitor_exxotic.jpg
+2025-11-24T15:53:13.674Z [INFO] Successfully downloaded image_19
+2025-11-24T15:53:13.674Z [INFO] Processing image 20/21
+2025-11-24T15:53:13.674Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-2510_ch_e_human_inquisitor_l_staff.jpg
+2025-11-24T15:53:13.783Z [INFO] Successfully downloaded image_20
+2025-11-24T15:53:13.783Z [INFO] Processing image 21/21
+2025-11-24T15:53:13.784Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf150aaa520.08537275/images/1000X1000-2510_ch_e_human_inquisitor_b.jpg
+2025-11-24T15:53:13.882Z [INFO] Successfully downloaded image_21
+2025-11-24T15:53:13.891Z [INFO] Attempting to download 3D model files...
+2025-11-24T15:53:16.958Z [INFO] Attempting to retrieve object 657713
+2025-11-24T15:53:16.958Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/657713
+2025-11-24T15:53:16.958Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/657713
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T15:53:17.973Z [INFO] Starting download for object ID: 657713
+2025-11-24T15:53:17.977Z [INFO] Attempting to download images...
+2025-11-24T15:53:17.977Z [INFO] Processing object for images: 657713 Ogre Lockserker
+2025-11-24T15:53:17.985Z [INFO] Found 16 images in the object
+2025-11-24T15:53:17.985Z [INFO] Processing image 1/16
+2025-11-24T15:53:17.985Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-MMF13_.jpg
+2025-11-24T15:53:18.363Z [INFO] Successfully downloaded image_1
+2025-11-24T15:53:18.363Z [INFO] Processing image 2/16
+2025-11-24T15:53:18.364Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (0).jpg
+2025-11-24T15:53:18.548Z [INFO] Successfully downloaded image_2
+2025-11-24T15:53:18.548Z [INFO] Processing image 3/16
+2025-11-24T15:53:18.549Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (D).jpg
+2025-11-24T15:53:18.722Z [INFO] Successfully downloaded image_3
+2025-11-24T15:53:18.722Z [INFO] Processing image 4/16
+2025-11-24T15:53:18.723Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (1).jpg
+2025-11-24T15:53:19.041Z [INFO] Successfully downloaded image_4
+2025-11-24T15:53:19.041Z [INFO] Processing image 5/16
+2025-11-24T15:53:19.042Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (2).jpg
+2025-11-24T15:53:19.183Z [INFO] Successfully downloaded image_5
+2025-11-24T15:53:19.183Z [INFO] Processing image 6/16
+2025-11-24T15:53:19.183Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (3).jpg
+2025-11-24T15:53:19.509Z [INFO] Successfully downloaded image_6
+2025-11-24T15:53:19.509Z [INFO] Processing image 7/16
+2025-11-24T15:53:19.509Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (4).jpg
+2025-11-24T15:53:19.840Z [INFO] Successfully downloaded image_7
+2025-11-24T15:53:19.840Z [INFO] Processing image 8/16
+2025-11-24T15:53:19.840Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall (5).jpg
+2025-11-24T15:53:19.960Z [INFO] Successfully downloaded image_8
+2025-11-24T15:53:19.960Z [INFO] Processing image 9/16
+2025-11-24T15:53:19.961Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall_ZB (1).jpg
+2025-11-24T15:53:20.097Z [INFO] Successfully downloaded image_9
+2025-11-24T15:53:20.097Z [INFO] Processing image 10/16
+2025-11-24T15:53:20.097Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall_ZB (2).jpg
+2025-11-24T15:53:20.185Z [INFO] Successfully downloaded image_10
+2025-11-24T15:53:20.185Z [INFO] Processing image 11/16
+2025-11-24T15:53:20.186Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall_ZB (3).jpg
+2025-11-24T15:53:20.296Z [INFO] Successfully downloaded image_11
+2025-11-24T15:53:20.296Z [INFO] Processing image 12/16
+2025-11-24T15:53:20.296Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall_ZB (4).jpg
+2025-11-24T15:53:20.446Z [INFO] Successfully downloaded image_12
+2025-11-24T15:53:20.447Z [INFO] Processing image 13/16
+2025-11-24T15:53:20.447Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-ChoGall_ZB (5).jpg
+2025-11-24T15:53:20.561Z [INFO] Successfully downloaded image_13
+2025-11-24T15:53:20.561Z [INFO] Processing image 14/16
+2025-11-24T15:53:20.562Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-2510_ch_ogre_lockserker.jpg
+2025-11-24T15:53:20.703Z [INFO] Successfully downloaded image_14
+2025-11-24T15:53:20.703Z [INFO] Processing image 15/16
+2025-11-24T15:53:20.704Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-2510_ch_ogre_lockserker_r_mace.jpg
+2025-11-24T15:53:20.806Z [INFO] Successfully downloaded image_15
+2025-11-24T15:53:20.806Z [INFO] Processing image 16/16
+2025-11-24T15:53:20.807Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/68baf0861b8254.44416739/images/1000X1000-2510_ch_ogre_lockserker_b.jpg
+2025-11-24T15:53:20.922Z [INFO] Successfully downloaded image_16
+2025-11-24T15:53:20.932Z [INFO] Attempting to download 3D model files...
+2025-11-24T16:19:57.235Z [INFO] Loaded OAuth token from settings
+2025-11-24T16:32:35.080Z [INFO] Loaded OAuth token from settings
+2025-11-24T16:34:40.579Z [INFO] Loaded OAuth token from settings
+2025-11-24T16:34:48.025Z [INFO] Loaded OAuth token from settings
+2025-11-24T16:35:00.332Z [INFO] Attempting to retrieve object 635699
+2025-11-24T16:35:00.333Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/635699
+2025-11-24T16:35:00.333Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/635699
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T16:35:00.620Z [INFO] Starting download for object ID: 635699
+2025-11-24T16:35:00.623Z [INFO] Attempting to download images...
+2025-11-24T16:35:00.623Z [INFO] Processing object for images: 635699 Human Mage Admiral (+ Elemental)
+2025-11-24T16:35:00.627Z [INFO] Found 23 images in the object
+2025-11-24T16:35:00.627Z [INFO] Processing image 1/23
+2025-11-24T16:35:00.628Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-MMF11.jpg
+2025-11-24T16:35:00.997Z [INFO] Successfully downloaded image_1
+2025-11-24T16:35:00.997Z [INFO] Processing image 2/23
+2025-11-24T16:35:00.997Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (0).jpg
+2025-11-24T16:35:01.151Z [INFO] Successfully downloaded image_2
+2025-11-24T16:35:01.152Z [INFO] Processing image 3/23
+2025-11-24T16:35:01.152Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (D).jpg
+2025-11-24T16:35:01.371Z [INFO] Successfully downloaded image_3
+2025-11-24T16:35:01.371Z [INFO] Processing image 4/23
+2025-11-24T16:35:01.371Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-JainaEle (D).jpg
+2025-11-24T16:35:01.444Z [INFO] Successfully downloaded image_4
+2025-11-24T16:35:01.444Z [INFO] Processing image 5/23
+2025-11-24T16:35:01.444Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (1).jpg
+2025-11-24T16:35:01.535Z [INFO] Successfully downloaded image_5
+2025-11-24T16:35:01.535Z [INFO] Processing image 6/23
+2025-11-24T16:35:01.536Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (2).jpg
+2025-11-24T16:35:01.714Z [INFO] Successfully downloaded image_6
+2025-11-24T16:35:01.714Z [INFO] Processing image 7/23
+2025-11-24T16:35:01.715Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (3).jpg
+2025-11-24T16:35:01.850Z [INFO] Successfully downloaded image_7
+2025-11-24T16:35:01.850Z [INFO] Processing image 8/23
+2025-11-24T16:35:01.851Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (4).jpg
+2025-11-24T16:35:01.909Z [INFO] Attempting to retrieve object 635696
+2025-11-24T16:35:01.909Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/635696
+2025-11-24T16:35:01.909Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/635696
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T16:35:01.959Z [INFO] Successfully downloaded image_8
+2025-11-24T16:35:01.959Z [INFO] Processing image 9/23
+2025-11-24T16:35:01.959Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina (5).jpg
+2025-11-24T16:35:02.194Z [INFO] Successfully downloaded image_9
+2025-11-24T16:35:02.195Z [INFO] Processing image 10/23
+2025-11-24T16:35:02.196Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-JainaEle (1).jpg
+2025-11-24T16:35:02.199Z [INFO] Starting download for object ID: 635696
+2025-11-24T16:35:02.231Z [INFO] Attempting to download images...
+2025-11-24T16:35:02.231Z [INFO] Processing object for images: 635696 Blood Elf Rogue
+2025-11-24T16:35:02.256Z [INFO] Found 14 images in the object
+2025-11-24T16:35:02.256Z [INFO] Processing image 1/14
+2025-11-24T16:35:02.257Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-MMF10.jpg
+2025-11-24T16:35:02.442Z [INFO] Successfully downloaded image_10
+2025-11-24T16:35:02.442Z [INFO] Processing image 11/23
+2025-11-24T16:35:02.443Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-JainaEle (2).jpg
+2025-11-24T16:35:02.488Z [INFO] Successfully downloaded image_1
+2025-11-24T16:35:02.488Z [INFO] Processing image 2/14
+2025-11-24T16:35:02.489Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (0).jpg
+2025-11-24T16:35:02.589Z [INFO] Successfully downloaded image_11
+2025-11-24T16:35:02.589Z [INFO] Processing image 12/23
+2025-11-24T16:35:02.590Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-JainaEle (3).jpg
+2025-11-24T16:35:02.638Z [INFO] Successfully downloaded image_2
+2025-11-24T16:35:02.638Z [INFO] Processing image 3/14
+2025-11-24T16:35:02.639Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (D).jpg
+2025-11-24T16:35:02.651Z [INFO] Successfully downloaded image_12
+2025-11-24T16:35:02.651Z [INFO] Processing image 13/23
+2025-11-24T16:35:02.652Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (1).jpg
+2025-11-24T16:35:02.723Z [INFO] Successfully downloaded image_3
+2025-11-24T16:35:02.723Z [INFO] Processing image 4/14
+2025-11-24T16:35:02.724Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (1).jpg
+2025-11-24T16:35:02.741Z [INFO] Successfully downloaded image_13
+2025-11-24T16:35:02.741Z [INFO] Processing image 14/23
+2025-11-24T16:35:02.742Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (2).jpg
+2025-11-24T16:35:02.820Z [INFO] Successfully downloaded image_4
+2025-11-24T16:35:02.820Z [INFO] Processing image 5/14
+2025-11-24T16:35:02.821Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (2).jpg
+2025-11-24T16:35:02.840Z [INFO] Successfully downloaded image_14
+2025-11-24T16:35:02.840Z [INFO] Processing image 15/23
+2025-11-24T16:35:02.841Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (3).jpg
+2025-11-24T16:35:02.903Z [INFO] Successfully downloaded image_5
+2025-11-24T16:35:02.904Z [INFO] Processing image 6/14
+2025-11-24T16:35:02.905Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (3).jpg
+2025-11-24T16:35:02.928Z [INFO] Successfully downloaded image_15
+2025-11-24T16:35:02.928Z [INFO] Processing image 16/23
+2025-11-24T16:35:02.929Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (4).jpg
+2025-11-24T16:35:02.978Z [INFO] Successfully downloaded image_6
+2025-11-24T16:35:02.978Z [INFO] Processing image 7/14
+2025-11-24T16:35:02.978Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera (4).jpg
+2025-11-24T16:35:03.005Z [INFO] Successfully downloaded image_16
+2025-11-24T16:35:03.005Z [INFO] Processing image 17/23
+2025-11-24T16:35:03.006Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (5).jpg
+2025-11-24T16:35:03.066Z [INFO] Successfully downloaded image_17
+2025-11-24T16:35:03.067Z [INFO] Processing image 18/23
+2025-11-24T16:35:03.067Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (6).jpg
+2025-11-24T16:35:03.081Z [INFO] Successfully downloaded image_7
+2025-11-24T16:35:03.081Z [INFO] Processing image 8/14
+2025-11-24T16:35:03.082Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera_ZB (1).jpg
+2025-11-24T16:35:03.126Z [INFO] Successfully downloaded image_8
+2025-11-24T16:35:03.126Z [INFO] Processing image 9/14
+2025-11-24T16:35:03.126Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera_ZB (2).jpg
+2025-11-24T16:35:03.268Z [INFO] Attempting to retrieve object 635691
+2025-11-24T16:35:03.269Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/635691
+2025-11-24T16:35:03.269Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/635691
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T16:35:03.359Z [INFO] Successfully downloaded image_9
+2025-11-24T16:35:03.359Z [INFO] Processing image 10/14
+2025-11-24T16:35:03.359Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera_ZB (3).jpg
+2025-11-24T16:35:03.375Z [INFO] Successfully downloaded image_18
+2025-11-24T16:35:03.375Z [INFO] Processing image 19/23
+2025-11-24T16:35:03.376Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-Jaina_ZB (7).jpg
+2025-11-24T16:35:03.458Z [INFO] Starting download for object ID: 635691
+2025-11-24T16:35:03.460Z [INFO] Successfully downloaded image_19
+2025-11-24T16:35:03.461Z [INFO] Processing image 20/23
+2025-11-24T16:35:03.461Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-2510_ch_human_mage_admiral.jpg
+2025-11-24T16:35:03.473Z [INFO] Attempting to download images...
+2025-11-24T16:35:03.473Z [INFO] Processing object for images: 635691 Banshee Dark Ranger
+2025-11-24T16:35:03.475Z [INFO] Successfully downloaded image_10
+2025-11-24T16:35:03.475Z [INFO] Processing image 11/14
+2025-11-24T16:35:03.476Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera_ZB (4).jpg
+2025-11-24T16:35:03.490Z [INFO] Found 15 images in the object
+2025-11-24T16:35:03.490Z [INFO] Processing image 1/15
+2025-11-24T16:35:03.490Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-MMF09.jpg
+2025-11-24T16:35:03.563Z [INFO] Successfully downloaded image_11
+2025-11-24T16:35:03.563Z [INFO] Processing image 12/14
+2025-11-24T16:35:03.564Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-Valeera_ZB (5).jpg
+2025-11-24T16:35:03.583Z [INFO] Successfully downloaded image_20
+2025-11-24T16:35:03.583Z [INFO] Processing image 21/23
+2025-11-24T16:35:03.584Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-2510_ch_mage_water_elemental.jpg
+2025-11-24T16:35:03.602Z [INFO] Successfully downloaded image_12
+2025-11-24T16:35:03.602Z [INFO] Processing image 13/14
+2025-11-24T16:35:03.602Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-2510_ch_blood_elf_rogue.jpg
+2025-11-24T16:35:03.670Z [INFO] Successfully downloaded image_21
+2025-11-24T16:35:03.670Z [INFO] Processing image 22/23
+2025-11-24T16:35:03.670Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-2510_ch_human_mage_admiral_b.jpg
+2025-11-24T16:35:03.680Z [INFO] Successfully downloaded image_1
+2025-11-24T16:35:03.680Z [INFO] Processing image 2/15
+2025-11-24T16:35:03.680Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (0).jpg
+2025-11-24T16:35:03.705Z [INFO] Successfully downloaded image_13
+2025-11-24T16:35:03.706Z [INFO] Processing image 14/14
+2025-11-24T16:35:03.706Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4f83930228.43410523/images/1000X1000-2510_ch_blood_elf_rogue_b.jpg
+2025-11-24T16:35:03.750Z [INFO] Successfully downloaded image_22
+2025-11-24T16:35:03.750Z [INFO] Processing image 23/23
+2025-11-24T16:35:03.751Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f5025732f86.62402269/images/1000X1000-2510_ch_mage_water_elemental_b.jpg
+2025-11-24T16:35:03.783Z [INFO] Successfully downloaded image_14
+2025-11-24T16:35:03.796Z [INFO] Attempting to download 3D model files...
+2025-11-24T16:35:03.798Z [INFO] Successfully downloaded image_2
+2025-11-24T16:35:03.798Z [INFO] Processing image 3/15
+2025-11-24T16:35:03.798Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (D).jpg
+2025-11-24T16:35:03.827Z [INFO] Successfully downloaded image_23
+2025-11-24T16:35:03.839Z [INFO] Attempting to download 3D model files...
+2025-11-24T16:35:04.165Z [INFO] Successfully downloaded image_3
+2025-11-24T16:35:04.165Z [INFO] Processing image 4/15
+2025-11-24T16:35:04.166Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (1).jpg
+2025-11-24T16:35:04.341Z [INFO] Successfully downloaded image_4
+2025-11-24T16:35:04.342Z [INFO] Processing image 5/15
+2025-11-24T16:35:04.342Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (2).jpg
+2025-11-24T16:35:04.530Z [INFO] Successfully downloaded image_5
+2025-11-24T16:35:04.530Z [INFO] Processing image 6/15
+2025-11-24T16:35:04.531Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (3).jpg
+2025-11-24T16:35:04.670Z [INFO] Successfully downloaded image_6
+2025-11-24T16:35:04.670Z [INFO] Processing image 7/15
+2025-11-24T16:35:04.670Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas (4).jpg
+2025-11-24T16:35:04.853Z [INFO] Successfully downloaded image_7
+2025-11-24T16:35:04.853Z [INFO] Processing image 8/15
+2025-11-24T16:35:04.854Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (1).jpg
+2025-11-24T16:35:04.968Z [INFO] Successfully downloaded image_8
+2025-11-24T16:35:04.969Z [INFO] Processing image 9/15
+2025-11-24T16:35:04.970Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (2).jpg
+2025-11-24T16:35:05.084Z [INFO] Successfully downloaded image_9
+2025-11-24T16:35:05.084Z [INFO] Processing image 10/15
+2025-11-24T16:35:05.085Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (3).jpg
+2025-11-24T16:35:05.411Z [INFO] Successfully downloaded image_10
+2025-11-24T16:35:05.411Z [INFO] Processing image 11/15
+2025-11-24T16:35:05.413Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (4).jpg
+2025-11-24T16:35:05.528Z [INFO] Successfully downloaded image_11
+2025-11-24T16:35:05.528Z [INFO] Processing image 12/15
+2025-11-24T16:35:05.529Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (5).jpg
+2025-11-24T16:35:05.642Z [INFO] Successfully downloaded image_12
+2025-11-24T16:35:05.642Z [INFO] Processing image 13/15
+2025-11-24T16:35:05.643Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-Sylvanas_ZB (6).jpg
+2025-11-24T16:35:05.957Z [INFO] Successfully downloaded image_13
+2025-11-24T16:35:05.957Z [INFO] Processing image 14/15
+2025-11-24T16:35:05.958Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-2510_ch_banshee_dark_ranger.jpg
+2025-11-24T16:35:06.140Z [INFO] Successfully downloaded image_14
+2025-11-24T16:35:06.140Z [INFO] Processing image 15/15
+2025-11-24T16:35:06.141Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4e600877a6.70432409/images/1000X1000-2510_ch_banshee_dark_ranger_b.jpg
+2025-11-24T16:35:06.340Z [INFO] Successfully downloaded image_15
+2025-11-24T16:35:06.354Z [INFO] Attempting to download 3D model files...
+2025-11-24T16:35:11.322Z [INFO] Attempting to retrieve object 635678
+2025-11-24T16:35:11.322Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/635678
+2025-11-24T16:35:11.322Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/635678
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-24T16:35:12.212Z [INFO] Starting download for object ID: 635678
+2025-11-24T16:35:12.216Z [INFO] Attempting to download images...
+2025-11-24T16:35:12.216Z [INFO] Processing object for images: 635678 Dragon Trickster
+2025-11-24T16:35:12.219Z [INFO] Found 14 images in the object
+2025-11-24T16:35:12.219Z [INFO] Processing image 1/14
+2025-11-24T16:35:12.219Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-MMF08.jpg
+2025-11-24T16:35:12.475Z [INFO] Successfully downloaded image_1
+2025-11-24T16:35:12.475Z [INFO] Processing image 2/14
+2025-11-24T16:35:12.476Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (0).jpg
+2025-11-24T16:35:12.922Z [INFO] Successfully downloaded image_2
+2025-11-24T16:35:12.922Z [INFO] Processing image 3/14
+2025-11-24T16:35:12.923Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (D).jpg
+2025-11-24T16:35:13.122Z [INFO] Successfully downloaded image_3
+2025-11-24T16:35:13.122Z [INFO] Processing image 4/14
+2025-11-24T16:35:13.122Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (1).jpg
+2025-11-24T16:35:13.234Z [INFO] Successfully downloaded image_4
+2025-11-24T16:35:13.234Z [INFO] Processing image 5/14
+2025-11-24T16:35:13.234Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (2).jpg
+2025-11-24T16:35:13.391Z [INFO] Successfully downloaded image_5
+2025-11-24T16:35:13.391Z [INFO] Processing image 6/14
+2025-11-24T16:35:13.391Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (3).jpg
+2025-11-24T16:35:13.631Z [INFO] Successfully downloaded image_6
+2025-11-24T16:35:13.631Z [INFO] Processing image 7/14
+2025-11-24T16:35:13.632Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (4).jpg
+2025-11-24T16:35:13.724Z [INFO] Successfully downloaded image_7
+2025-11-24T16:35:13.724Z [INFO] Processing image 8/14
+2025-11-24T16:35:13.725Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing (5).jpg
+2025-11-24T16:35:13.814Z [INFO] Successfully downloaded image_8
+2025-11-24T16:35:13.815Z [INFO] Processing image 9/14
+2025-11-24T16:35:13.815Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing_ZB (1).jpg
+2025-11-24T16:35:13.922Z [INFO] Successfully downloaded image_9
+2025-11-24T16:35:13.922Z [INFO] Processing image 10/14
+2025-11-24T16:35:13.923Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing_ZB (3).jpg
+2025-11-24T16:35:14.040Z [INFO] Successfully downloaded image_10
+2025-11-24T16:35:14.040Z [INFO] Processing image 11/14
+2025-11-24T16:35:14.041Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing_ZB (4).jpg
+2025-11-24T16:35:14.147Z [INFO] Successfully downloaded image_11
+2025-11-24T16:35:14.147Z [INFO] Processing image 12/14
+2025-11-24T16:35:14.148Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-Brightwing_ZB (2).jpg
+2025-11-24T16:35:14.265Z [INFO] Successfully downloaded image_12
+2025-11-24T16:35:14.265Z [INFO] Processing image 13/14
+2025-11-24T16:35:14.265Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-2510_ch_dragon_trickster.jpg
+2025-11-24T16:35:14.333Z [INFO] Successfully downloaded image_13
+2025-11-24T16:35:14.333Z [INFO] Processing image 14/14
+2025-11-24T16:35:14.334Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4de052e4f6.81670930/images/1000X1000-2510_ch_dragon_trickster_b.jpg
+2025-11-24T16:35:14.417Z [INFO] Successfully downloaded image_14
+2025-11-24T16:35:14.459Z [INFO] Attempting to download 3D model files...

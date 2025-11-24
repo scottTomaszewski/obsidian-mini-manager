@@ -27,12 +27,18 @@ export class DownloadManagerModal extends Modal {
             event.preventDefault();
         });
 
-        contentEl.addEventListener('dragenter', () => {
-            contentEl.addClass('drag-over');
+        contentEl.addEventListener('dragenter', (event) => {
+            // Check if the drag is coming from outside the element
+            if (!contentEl.contains(event.relatedTarget as Node)) {
+                contentEl.addClass('drag-over');
+            }
         });
 
-        contentEl.addEventListener('dragleave', () => {
-            contentEl.removeClass('drag-over');
+        contentEl.addEventListener('dragleave', (event) => {
+            // Check if the drag is going to a child element
+            if (!contentEl.contains(event.relatedTarget as Node)) {
+                contentEl.removeClass('drag-over');
+            }
         });
 
         contentEl.addEventListener('drop', (event) => {
@@ -42,6 +48,7 @@ export class DownloadManagerModal extends Modal {
             const text = event.dataTransfer.getData('text/plain');
             this.handleDrop(text);
         });
+
 
         new Setting(contentEl)
             .setName('New Download')
