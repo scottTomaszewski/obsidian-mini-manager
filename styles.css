@@ -2,3 +2,39 @@
 .drag-over {
   border: 2px dashed var(--interactive-accent);
 }
+
+.download-job .setting-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 1em;
+}
+
+.download-job-details {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.download-job-details .setting-item-description {
+  flex-grow: 1;
+}
+
+.download-job-details progress {
+  width: 150px;
+  margin-left: 10px;
+}
+
+.download-job-details button {
+  margin-left: 10px;
+}
+
+progress.error::-webkit-progress-bar {
+    background-color: var(--background-primary);
+}
+progress.error::-webkit-progress-value {
+    background-color: var(--text-error);
+}
+progress.error::-moz-progress-bar {
+    background-color: var(--text-error);
+}

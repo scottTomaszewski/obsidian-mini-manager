@@ -123,6 +123,14 @@ export class DownloadManagerModal extends Modal {
         }
     }
 
+    private retryDownload(jobId: string) {
+        this.downloadManager.removeJob(jobId);
+        this.plugin.downloader.downloadObject(jobId).catch(error => {
+            new Notice(`Error queuing object ${jobId}: ${error.message}`);
+            console.error(`Error queuing object ${jobId}:`, error);
+        });
+    }
+
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
@@ -141,10 +149,16 @@ export class DownloadManagerModal extends Modal {
             const jobEl = this.jobsContainer.createDiv('download-job');
 
             new Setting(jobEl)
-                .setName(job.object.name)
-                .setDesc(job.progressMessage);
+                .setName(job.object.name);
 
-            const progressBar = jobEl.createEl('progress', {
+            const detailsEl = jobEl.createDiv('download-job-details');
+
+            const progressMessageEl = detailsEl.createEl('span', {
+                text: job.error ? `Error: ${job.error}` : job.progressMessage,
+                cls: 'setting-item-description'
+            });
+
+            const progressBar = detailsEl.createEl('progress', {
                 attr: {
                     value: job.progress,
                     max: 100,
@@ -152,7 +166,16 @@ export class DownloadManagerModal extends Modal {
             });
 
             if (job.error) {
-                jobEl.createEl('p', { text: `Error: ${job.error}`, cls: 'error-message' });
+                progressBar.addClass('error');
+                const retryButton = detailsEl.createEl('button', { text: 'Retry' });
+                retryButton.addEventListener('click', () => {
+                    this.retryDownload(job.id);
+                });
+            } else if (job.status === 'completed') {
+                const clearButton = detailsEl.createEl('button', { text: 'Clear' });
+                clearButton.addEventListener('click', () => {
+                    this.downloadManager.removeJob(job.id);
+                });
             }
         }
     }

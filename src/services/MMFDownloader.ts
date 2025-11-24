@@ -88,6 +88,9 @@ export class MMFDownloader {
         }
 
         const job = this.downloadManager.getJob(objectId) || this.downloadManager.addJob(object);
+        if (object) {
+            this.downloadManager.updateJobObject(job.id, object);
+        }
         
         try {
             this.downloadManager.updateJob(job.id, 'downloading', 10, "Starting download...");

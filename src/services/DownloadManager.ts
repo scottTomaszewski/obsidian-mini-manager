@@ -49,12 +49,27 @@ export class DownloadManager {
         }
     }
 
+    public updateJobObject(id: string, object: MMFObject) {
+        const job = this.jobs.get(id);
+        if (job) {
+            job.object = object;
+            this.notifyListeners();
+        }
+    }
+
     public getJob(id: string): DownloadJob | undefined {
         return this.jobs.get(id);
     }
 
     public getJobs(): DownloadJob[] {
         return Array.from(this.jobs.values());
+    }
+
+    public removeJob(id: string) {
+        if (this.jobs.has(id)) {
+            this.jobs.delete(id);
+            this.notifyListeners();
+        }
     }
 
     public clearCompleted() {
