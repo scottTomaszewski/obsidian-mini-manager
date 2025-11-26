@@ -1,6 +1,6 @@
 {
   "name": "obsidian-mini-manager",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "An Obsidian plugin to download and manage 3D models from MyMiniFactory",
   "main": "main.js",
   "scripts": {
@@ -14,7 +14,7 @@
     "myminifactory",
     "3d-printing"
   ],
-  "author": "Your Name",
+  "author": "Scott Tomaszewski",
   "license": "MIT",
   "devDependencies": {
     "@types/jszip": "^3.4.0",
