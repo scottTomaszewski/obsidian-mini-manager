@@ -16,6 +16,7 @@ export class MMFDownloader {
     private oauth2Service: OAuth2Service;
     private downloadQueue: string[] = [];
     private activeDownloads: number = 0;
+    private cancellationTokens: Map<string, AbortController> = new Map(); // For actual request cancellation
 
     constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.app = app;
@@ -45,6 +46,21 @@ export class MMFDownloader {
         this._processQueue();
     }
 
+    public cancelDownload(objectId: string): void {
+        this.downloadQueue = this.downloadQueue.filter(id => id !== objectId); // Remove from queue
+
+        // Abort active HTTP requests if any
+        const abortController = this.cancellationTokens.get(objectId);
+        if (abortController) {
+            abortController.abort();
+            this.cancellationTokens.delete(objectId);
+        }
+
+        this.downloadManager.removeJob(objectId);
+        new Notice(`Download for ${objectId} cancelled.`);
+        this.logger.info(`Download for object ${objectId} cancelled.`);
+    }
+
     private async _processQueue(): Promise<void> {
         if (this.activeDownloads >= this.settings.maxConcurrentDownloads) {
             return;
@@ -57,22 +73,46 @@ export class MMFDownloader {
         this.activeDownloads++;
         const objectId = this.downloadQueue.shift();
 
+        // Check if the job was cancelled while in queue
+        if (!this.downloadManager.getJob(objectId)) {
+            this.logger.info(`Skipping cancelled job ${objectId} from queue.`);
+            this.activeDownloads--;
+            return this._processQueue(); // Process next in queue
+        }
+
+        const abortController = new AbortController();
+        this.cancellationTokens.set(objectId, abortController);
+
         try {
-            await this._downloadObjectInternal(objectId);
+            await this._downloadObjectInternal(objectId, abortController.signal);
         } catch (error) {
-            this.logger.error(`Failed to download object ${objectId} in queue: ${error.message}`);
+            if (error.name === 'AbortError') {
+                this.logger.info(`Download for object ${objectId} was aborted.`);
+                this.downloadManager.removeJob(objectId); // Ensure it's removed
+            } else {
+                this.logger.error(`Failed to download object ${objectId} in queue: ${error.message}`);
+                // Ensure job status is failed if an unexpected error occurs
+                if (this.downloadManager.getJob(objectId)) {
+                    this.downloadManager.updateJob(objectId, 'failed', 100, "Failed", error.message);
+                }
+            }
         } finally {
+            this.cancellationTokens.delete(objectId);
             this.activeDownloads--;
             this._processQueue();
         }
     }
 
-    private async _downloadObjectInternal(objectId: string): Promise<void> {
+    private async _downloadObjectInternal(objectId: string, signal: AbortSignal): Promise<void> {
         let object: MMFObject;
         try {
             this.logger.info(`Attempting to retrieve object ${objectId}`);
             object = await this.apiService.getObjectById(objectId);
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError'); // Check for abortion after API call
         } catch (objectError) {
+            if (objectError.name === 'AbortError') {
+                throw objectError;
+            }
             this.logger.error(`Failed to retrieve object ${objectId}: ${objectError.message}`);
             object = {
                 id: objectId,
@@ -103,9 +143,11 @@ export class MMFDownloader {
             let errorMessages = [];
             
             this.downloadManager.updateJob(job.id, 'downloading', 20, "Creating folders...");
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
             // Create folder structure - even with minimal object
             const objectFolder = await this.createObjectFolder(object);
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
             
             let mainLocalImagePath: string | undefined;
 
@@ -114,24 +156,28 @@ export class MMFDownloader {
                 try {
                     this.logger.info("Attempting to download images...");
                     this.downloadManager.updateJob(job.id, 'downloading', 50, "Downloading images...");
-                    mainLocalImagePath = await this.downloadImages(job, object, objectFolder);
+                    mainLocalImagePath = await this.downloadImages(job, object, objectFolder, signal); // Pass signal
                     imagesDownloaded = true;
                 } catch (imageError) {
+                    if (imageError.name === 'AbortError') throw imageError;
                     this.logger.error(`Error downloading images: ${imageError.message}`);
                     errorMessages.push(`Images download error: ${imageError.message}`);
                 }
             }
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
             this.downloadManager.updateJob(job.id, 'downloading', 30, "Creating metadata files...");
             // Create metadata markdown file with what we have
             await this.createMetadataFile(object, objectFolder, mainLocalImagePath);
             await this.saveMetadataFile(object, objectFolder);
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
             
             this.downloadManager.updateJob(job.id, 'downloading', 40, "Checking API details...");
             // If we couldn't even get object details and strict mode is on, stop here
             if (!objectDetailsRetrieved && this.settings.strictApiMode) {
                 throw new Error(`Failed to retrieve object details for ID ${objectId}`);
             }
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
             
             this.downloadManager.updateJob(job.id, 'downloading', 60, "Downloading files...");
             // Download files if enabled
@@ -155,11 +201,13 @@ export class MMFDownloader {
                         objectWithFiles.files = { total_count: 0, items: [] };
                         this.logger.warn("Files property is not an array, initializing as empty array");
                     }
+                    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
                     
                     // Try to download files or at least create instructions
-                    await this.downloadFiles(job, objectWithFiles, objectFolder);
+                    await this.downloadFiles(job, objectWithFiles, objectFolder, signal); // Pass signal
                     filesDownloaded = true;
                 } catch (filesError) {
+                    if (filesError.name === 'AbortError') throw filesError;
                     this.logger.error(`Error downloading files: ${filesError.message}`);
                     errorMessages.push(`Files download error: ${filesError.message}`);
                     
@@ -171,6 +219,7 @@ export class MMFDownloader {
                     }
                 }
             }
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
             this.downloadManager.updateJob(job.id, 'downloading', 80, "Finalizing...");
             
             // Prepare completion message
@@ -196,6 +245,11 @@ export class MMFDownloader {
             
             new Notice(message);
         } catch (error) {
+            if (error.name === 'AbortError') {
+                this.downloadManager.removeJob(objectId); // Remove the job if it was aborted
+                this.logger.info(`Download for object ${objectId} was aborted in _downloadObjectInternal.`);
+                throw error; // Propagate the AbortError
+            }
             this.logger.error(`Error downloading object ${objectId}: ${error.message}`);
             this.downloadManager.updateJob(job.id, 'failed', 100, "Failed", error.message);
             
@@ -272,7 +326,7 @@ export class MMFDownloader {
             instructionsContent += `1. Visit the object page on MyMiniFactory: [${object.name || `Object ${objectId}`}](${webUrl})\n`;
             instructionsContent += `2. Log in to your MyMiniFactory account\n`;
             instructionsContent += `3. Use the download button on the website\n`;
-            instructionsContent += `4. Save the files to this folder\n\n`;
+            content += `4. Place them in the files subfolder of this directory\n`;
             
             instructionsContent += `## Technical Details\n\n`;
             instructionsContent += `Error: ${error.message}\n\n`;
@@ -452,7 +506,7 @@ export class MMFDownloader {
     }
     
     
-    private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string): Promise<string | undefined> {
+    private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<string | undefined> {
         this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
         
         // Create images folder
@@ -475,6 +529,7 @@ export class MMFDownloader {
             } else {
                 // Download each image
                 for (let i = 0; i < imageArray.length; i++) {
+                    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
                     const image = imageArray[i];
                     this.logger.info(`Processing image ${i+1}/${imageArray.length}`);
                     this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i+1)/imageArray.length) * 10), `Downloading image ${i+1}/${imageArray.length}`);
@@ -486,7 +541,7 @@ export class MMFDownloader {
                         continue;
                     }
                     
-                    const downloadedPath = await this.downloadSingleImage(imageUrl, imagesPath, `image_${i+1}`);
+                    const downloadedPath = await this.downloadSingleImage(imageUrl, imagesPath, `image_${i+1}`, signal);
                     if (downloadedPath && !mainLocalImagePath) {
                         mainLocalImagePath = downloadedPath;
                     }
@@ -511,7 +566,7 @@ export class MMFDownloader {
     /**
      * Download a single image given its URL
      */
-    private async downloadSingleImage(url: string, folderPath: string, baseFileName: string): Promise<string | undefined> {
+    private async downloadSingleImage(url: string, folderPath: string, baseFileName: string, signal: AbortSignal): Promise<string | undefined> {
         try {
             const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
             const filePath = normalizePath(`${folderPath}/${fileName}`);
@@ -526,7 +581,8 @@ export class MMFDownloader {
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache',
                     'Expires': '0',
-                }
+                },
+                signal: signal // Pass signal here
             });
             
             if (response.status !== 200) {
@@ -537,6 +593,7 @@ export class MMFDownloader {
             this.logger.info(`Successfully downloaded ${baseFileName}`);
             return filePath;
         } catch (error) {
+            if (error.name === 'AbortError') throw error; // Re-throw AbortError
             new Notice(`Error downloading ${baseFileName}: ${error.message}`);
             this.logger.error(`Error downloading image ${url}: ${error.message}`);
             
@@ -548,7 +605,7 @@ export class MMFDownloader {
         }
     }
     
-    private async downloadFiles(job: DownloadJob, object: MMFObject, folderPath: string): Promise<void> {
+    private async downloadFiles(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<void> {
         // Create files folder
         const filesPath = normalizePath(`${folderPath}/files`);
         if (!await this.folderExists(filesPath)) {
@@ -564,6 +621,7 @@ export class MMFDownloader {
 
         // Download each file
         for (const item of object.files.items) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
             if (!item.download_url) {
                 this.logger.error(`No download URL for file: ${item.filename}`);
                 continue;
@@ -590,7 +648,8 @@ export class MMFDownloader {
                     const response = await requestUrl({
                         url: url,
                         method: 'GET',
-                        headers: headers
+                        headers: headers,
+                        signal: signal // Pass signal here
                     });
                     
                     if (response.status !== 200) {
@@ -605,17 +664,20 @@ export class MMFDownloader {
                     downloadedFiles++;
 
                     if (item.filename.toLowerCase().endsWith('.zip')) {
+                        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
                         new Notice(`Extracting ${item.filename}...`);
                         this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
                         try {
-                            await this.extractZipFile(arrayBuffer, filesPath);
+                            await this.extractZipFile(arrayBuffer, filesPath, signal); // Pass signal
                         } catch (zipError) {
+                            if (zipError.name === 'AbortError') throw zipError;
                             this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
                             this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(arrayBuffer.slice(0, 500))}`);
                             throw zipError; // Re-throw to be caught by the outer catch
                         }
                     }
                 } catch (error) {
+                    if (error.name === 'AbortError') throw error;
                     new Notice(`Error downloading ${item.filename}: ${error.message}`);
                     this.logger.error(`Error downloading file ${item.filename}: ${error.message}`);
                 }
@@ -625,12 +687,13 @@ export class MMFDownloader {
         }
     }
 
-    private async extractZipFile(zipData: ArrayBuffer, destinationPath: string): Promise<void> {
+    private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
         try {
             const zip = await JSZip.loadAsync(zipData);
             new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
 
             for (const filename in zip.files) {
+                if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
                 const file = zip.files[filename];
 
                 if (!file.dir) {
@@ -642,12 +705,14 @@ export class MMFDownloader {
                     if (parentDir && !await this.folderExists(parentDir)) {
                         await this.app.vault.createFolder(parentDir);
                     }
+                    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
                     
                     await this.app.vault.createBinary(filePath, content);
                 }
             }
             new Notice('Extraction complete.');
         } catch (error) {
+            if (error.name === 'AbortError') throw error;
             new Notice(`Failed to extract zip file: ${error.message}`);
             this.logger.error(`Failed to extract zip file: ${error.message}`);
         }
@@ -678,4 +743,3 @@ export class MMFDownloader {
         if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
         return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
     }
-}
