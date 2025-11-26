@@ -19,6 +19,7 @@ export class DownloadManagerModal extends Modal {
     }
 
     onOpen() {
+        this.modalEl.addClass('mini-manager-modal');
         const { contentEl } = this;
         contentEl.createEl('h2', { text: 'Download Manager' });
 

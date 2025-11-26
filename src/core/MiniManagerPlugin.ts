@@ -34,15 +34,15 @@ export default class MiniManagerPlugin extends Plugin {
 		this.searchService = new SearchService(this.app, this.settings);
 		// await this.searchService.buildIndex();
 
-		this.registerEvent(this.app.vault.on('create', () => {
-			this.searchService.buildIndex();
-		}));
-		this.registerEvent(this.app.vault.on('delete', () => {
-			this.searchService.buildIndex();
-		}));
-		this.registerEvent(this.app.vault.on('rename', () => {
-			this.searchService.buildIndex();
-		}));
+		// this.registerEvent(this.app.vault.on('create', () => {
+		// 	this.searchService.buildIndex();
+		// }));
+		// this.registerEvent(this.app.vault.on('delete', () => {
+		// 	this.searchService.buildIndex();
+		// }));
+		// this.registerEvent(this.app.vault.on('rename', () => {
+		// 	this.searchService.buildIndex();
+		// }));
 
 
 		// Check if API key is set and show a notice if it's not

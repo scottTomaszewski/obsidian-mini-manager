@@ -181,3 +181,6 @@
 2025-11-26T18:33:03.039Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-NightElf_DemonHunter (1).jpg
 2025-11-26T18:33:03.110Z [INFO] Successfully downloaded image_26
 2025-11-26T18:33:03.139Z [INFO] Attempting to download 3D model files...
+2025-11-26T23:34:31.659Z [INFO] Loaded OAuth token from settings
+2025-11-26T23:36:06.793Z [INFO] Loaded OAuth token from settings
+2025-11-26T23:36:45.446Z [INFO] Loaded OAuth token from settings

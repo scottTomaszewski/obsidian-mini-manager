@@ -34,31 +34,31 @@ export class MMFSearchModal extends Modal {
 			);
 
 		// Search button
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn
-					.setButtonText('Search')
-					.setCta()
-					.onClick(async () => {
-						if (!this.query) {
-							new Notice('Please enter a search query');
-							return;
-						}
-						
-						if (this.searchLocal) {
-							this.searchResults = this.plugin.searchService.search(this.query);
-							this.displaySearchResults();
-						} else {
-							try {
-								new Notice('Searching MyMiniFactory...');
-								this.searchResults = await this.plugin.apiService.searchObjects(this.query);
-								this.displaySearchResults();
-							} catch (error) {
-								new Notice(`Error: ${error.message}`);
-								console.error(error);
-							}
-						}
-					}));
+		// new Setting(contentEl)
+		// 	.addButton((btn) =>
+		// 		btn
+		// 			.setButtonText('Search')
+		// 			.setCta()
+		// 			.onClick(async () => {
+		// 				if (!this.query) {
+		// 					new Notice('Please enter a search query');
+		// 					return;
+		// 				}
+		//
+		// 				if (this.searchLocal) {
+		// 					this.searchResults = this.plugin.searchService.search(this.query);
+		// 					this.displaySearchResults();
+		// 				} else {
+		// 					try {
+		// 						new Notice('Searching MyMiniFactory...');
+		// 						this.searchResults = await this.plugin.apiService.searchObjects(this.query);
+		// 						this.displaySearchResults();
+		// 					} catch (error) {
+		// 						new Notice(`Error: ${error.message}`);
+		// 						console.error(error);
+		// 					}
+		// 				}
+		// 			}));
 
 		// Results container
 		this.resultContainerEl = contentEl.createDiv();
