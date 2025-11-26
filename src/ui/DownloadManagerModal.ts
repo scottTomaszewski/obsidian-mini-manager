@@ -166,25 +166,22 @@ export class DownloadManagerModal extends Modal {
                 },
             });
 
-            if (job.status === 'failed') { // Changed from job.error to job.status === 'failed' for clarity
+            if (job.status === 'failed') {
                 progressBar.addClass('error');
-                new Setting(jobEl).addButton(button => button // Use new Setting for the button to appear nicely
-                    .setButtonText('Retry')
-                    .onClick(() => {
-                        this.retryDownload(job.id);
-                    }));
+                const retryButton = detailsEl.createEl('button', { text: 'Retry' });
+                retryButton.addEventListener('click', () => {
+                    this.retryDownload(job.id);
+                });
             } else if (job.status === 'completed') {
-                new Setting(jobEl).addButton(button => button // Use new Setting for the button
-                    .setButtonText('Clear')
-                    .onClick(() => {
-                        this.downloadManager.removeJob(job.id);
-                    }));
+                const clearButton = detailsEl.createEl('button', { text: 'Clear' });
+                clearButton.addEventListener('click', () => {
+                    this.downloadManager.removeJob(job.id);
+                });
             } else if (['pending', 'downloading', 'extracting'].includes(job.status)) {
-                new Setting(jobEl).addButton(button => button // Use new Setting for the button
-                    .setButtonText('Cancel')
-                    .onClick(() => {
-                        this.plugin.downloader.cancelDownload(job.id);
-                    }));
+                const cancelButton = detailsEl.createEl('button', { text: 'Cancel' });
+                cancelButton.addEventListener('click', () => {
+                    this.plugin.downloader.cancelDownload(job.id);
+                });
             }
         }
     }
