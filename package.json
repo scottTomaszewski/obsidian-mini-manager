@@ -1,11 +1,12 @@
 {
   "name": "obsidian-mini-manager",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "An Obsidian plugin to download and manage 3D models from MyMiniFactory",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build-no-check": "node esbuild.config.mjs production",
     "test": "jest"
   },
   "keywords": [

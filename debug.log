@@ -90,3 +90,94 @@
 2025-11-26T16:58:28.309Z [ERROR] Error downloading object 635667: File already exists.
 2025-11-26T16:58:28.325Z [ERROR] Failed to download object 635667 in queue: Failed to download object: File already exists.
 
+2025-11-26T18:32:42.271Z [INFO] Loaded OAuth token from settings
+2025-11-26T18:33:00.320Z [INFO] Attempting to retrieve object 635667
+2025-11-26T18:33:00.324Z [INFO] Making API request to: https://www.myminifactory.com/api/v2/objects/635667
+2025-11-26T18:33:00.324Z [DEBUG] API Request:
+                    URL: https://www.myminifactory.com/api/v2/objects/635667
+                    Method: GET
+                    Attempt: 1/3
+                
+2025-11-26T18:33:00.669Z [INFO] Starting download for object ID: 635667
+2025-11-26T18:33:00.680Z [INFO] Attempting to download images...
+2025-11-26T18:33:00.680Z [INFO] Processing object for images: 635667 Night Elf Demon Hunter (2 Vers.)
+2025-11-26T18:33:00.690Z [INFO] Found 26 images in the object
+2025-11-26T18:33:00.690Z [INFO] Processing image 1/26
+2025-11-26T18:33:00.691Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-DemonHunter (MMF).jpg
+2025-11-26T18:33:01.057Z [INFO] Successfully downloaded image_1
+2025-11-26T18:33:01.057Z [INFO] Processing image 2/26
+2025-11-26T18:33:01.057Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-DemonHunter (0).jpg
+2025-11-26T18:33:01.176Z [INFO] Successfully downloaded image_2
+2025-11-26T18:33:01.177Z [INFO] Processing image 3/26
+2025-11-26T18:33:01.177Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-Illidan (0).jpg
+2025-11-26T18:33:01.295Z [INFO] Successfully downloaded image_3
+2025-11-26T18:33:01.295Z [INFO] Processing image 4/26
+2025-11-26T18:33:01.296Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-Illidan (D).jpg
+2025-11-26T18:33:01.398Z [INFO] Successfully downloaded image_4
+2025-11-26T18:33:01.398Z [INFO] Processing image 5/26
+2025-11-26T18:33:01.398Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA (1).jpg
+2025-11-26T18:33:01.494Z [INFO] Successfully downloaded image_5
+2025-11-26T18:33:01.494Z [INFO] Processing image 6/26
+2025-11-26T18:33:01.495Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanB (1).jpg
+2025-11-26T18:33:01.585Z [INFO] Successfully downloaded image_6
+2025-11-26T18:33:01.585Z [INFO] Processing image 7/26
+2025-11-26T18:33:01.585Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA (2).jpg
+2025-11-26T18:33:01.658Z [INFO] Successfully downloaded image_7
+2025-11-26T18:33:01.659Z [INFO] Processing image 8/26
+2025-11-26T18:33:01.659Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanB (2).jpg
+2025-11-26T18:33:01.739Z [INFO] Successfully downloaded image_8
+2025-11-26T18:33:01.739Z [INFO] Processing image 9/26
+2025-11-26T18:33:01.740Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA (3).jpg
+2025-11-26T18:33:01.828Z [INFO] Successfully downloaded image_9
+2025-11-26T18:33:01.828Z [INFO] Processing image 10/26
+2025-11-26T18:33:01.829Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA (4).jpg
+2025-11-26T18:33:01.886Z [INFO] Successfully downloaded image_10
+2025-11-26T18:33:01.886Z [INFO] Processing image 11/26
+2025-11-26T18:33:01.887Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA (5).jpg
+2025-11-26T18:33:01.966Z [INFO] Successfully downloaded image_11
+2025-11-26T18:33:01.966Z [INFO] Processing image 12/26
+2025-11-26T18:33:01.966Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA_ZB (1).jpg
+2025-11-26T18:33:02.043Z [INFO] Successfully downloaded image_12
+2025-11-26T18:33:02.043Z [INFO] Processing image 13/26
+2025-11-26T18:33:02.044Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanB_ZB (1).jpg
+2025-11-26T18:33:02.120Z [INFO] Successfully downloaded image_13
+2025-11-26T18:33:02.120Z [INFO] Processing image 14/26
+2025-11-26T18:33:02.122Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA_ZB (2).jpg
+2025-11-26T18:33:02.193Z [INFO] Successfully downloaded image_14
+2025-11-26T18:33:02.193Z [INFO] Processing image 15/26
+2025-11-26T18:33:02.195Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanB_ZB (2).jpg
+2025-11-26T18:33:02.264Z [INFO] Successfully downloaded image_15
+2025-11-26T18:33:02.264Z [INFO] Processing image 16/26
+2025-11-26T18:33:02.264Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA_ZB (3).jpg
+2025-11-26T18:33:02.330Z [INFO] Successfully downloaded image_16
+2025-11-26T18:33:02.330Z [INFO] Processing image 17/26
+2025-11-26T18:33:02.331Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA_ZB (4).jpg
+2025-11-26T18:33:02.417Z [INFO] Successfully downloaded image_17
+2025-11-26T18:33:02.417Z [INFO] Processing image 18/26
+2025-11-26T18:33:02.418Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-IllidanA_ZB (5).jpg
+2025-11-26T18:33:02.485Z [INFO] Successfully downloaded image_18
+2025-11-26T18:33:02.485Z [INFO] Processing image 19/26
+2025-11-26T18:33:02.486Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_blindfolded.jpg
+2025-11-26T18:33:02.599Z [INFO] Successfully downloaded image_19
+2025-11-26T18:33:02.599Z [INFO] Processing image 20/26
+2025-11-26T18:33:02.600Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_eyes.jpg
+2025-11-26T18:33:02.667Z [INFO] Successfully downloaded image_20
+2025-11-26T18:33:02.667Z [INFO] Processing image 21/26
+2025-11-26T18:33:02.668Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_extra_ponytaill.jpg
+2025-11-26T18:33:02.745Z [INFO] Successfully downloaded image_21
+2025-11-26T18:33:02.745Z [INFO] Processing image 22/26
+2025-11-26T18:33:02.746Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_bar_wing.jpg
+2025-11-26T18:33:02.826Z [INFO] Successfully downloaded image_22
+2025-11-26T18:33:02.826Z [INFO] Processing image 23/26
+2025-11-26T18:33:02.828Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_bal_wing.jpg
+2025-11-26T18:33:02.899Z [INFO] Successfully downloaded image_23
+2025-11-26T18:33:02.899Z [INFO] Processing image 24/26
+2025-11-26T18:33:02.900Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_b_rock.jpg
+2025-11-26T18:33:02.972Z [INFO] Successfully downloaded image_24
+2025-11-26T18:33:02.972Z [INFO] Processing image 25/26
+2025-11-26T18:33:02.973Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-2510_ch_nightelf_demonhunter_b.jpg
+2025-11-26T18:33:03.037Z [INFO] Successfully downloaded image_25
+2025-11-26T18:33:03.037Z [INFO] Processing image 26/26
+2025-11-26T18:33:03.039Z [INFO] Downloading image from URL: https://dl2.myminifactory.com/object-assets/688f4a8f2fea71.73457094/images/1000X1000-NightElf_DemonHunter (1).jpg
+2025-11-26T18:33:03.110Z [INFO] Successfully downloaded image_26
+2025-11-26T18:33:03.139Z [INFO] Attempting to download 3D model files...

@@ -83,7 +83,7 @@ export class DownloadManagerModal extends Modal {
                     // Ensure plugin.settings is passed, as ValidationService needs access to downloadPath etc.
                     const validationService = new ValidationService(this.app, this.plugin.settings);
                     const results = await validationService.validate();
-                    new ValidationModal(this.app, results).open();
+                    new ValidationModal(this.app, this.plugin, results).open();
                 }));
 
         this.jobsContainer = contentEl.createDiv('jobs-container');
