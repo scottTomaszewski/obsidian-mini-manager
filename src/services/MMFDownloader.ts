@@ -530,8 +530,7 @@ export class MMFDownloader {
             });
             
             if (response.status !== 200) {
-                new Notice(`Failed to download image: ${response.status}`);
-                return undefined;
+                throw new Error(`Failed to download image: ${response.status}`);
             }
             
             await this.app.vault.createBinary(filePath, response.arrayBuffer);
@@ -595,8 +594,7 @@ export class MMFDownloader {
                     });
                     
                     if (response.status !== 200) {
-                        new Notice(`Failed to download file: ${item.filename} (Status ${response.status})`);
-                        continue;
+                        throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
                     }
                     
                     const filePath = normalizePath(`${filesPath}/${item.filename}`);

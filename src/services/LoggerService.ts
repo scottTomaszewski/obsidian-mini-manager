@@ -14,7 +14,7 @@ export class LoggerService {
 
     private constructor(app: App) {
         this.app = app;
-        this.logFilePath = normalizePath(`${this.app.vault.configDir}/plugins/obsidian-mini-manager/debug.log`);
+        this.logFilePath = normalizePath(`${this.app.vault.configDir}/plugins/mini-manager/debug.log`);
     }
 
     public static getInstance(app: App): LoggerService {
