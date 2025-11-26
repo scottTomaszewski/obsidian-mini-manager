@@ -13,6 +13,7 @@ export class SearchService {
     }
 
     async buildIndex() {
+		console.log("Building search index...");
         this.index = [];
         const downloadPath = this.settings.downloadPath;
         const files = this.app.vault.getFiles();
@@ -27,6 +28,7 @@ export class SearchService {
                 }
             }
         }
+		console.log("Search index built.");
     }
 
     search(query: string): MMFObject[] {

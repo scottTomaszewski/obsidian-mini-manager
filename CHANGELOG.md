@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.5
+
+- validation improvements
+- attempts to fix on-startup crash
+
 ## 0.0.3
 
 - Correctly errors on 403

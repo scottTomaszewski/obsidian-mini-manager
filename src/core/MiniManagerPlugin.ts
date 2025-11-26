@@ -32,7 +32,7 @@ export default class MiniManagerPlugin extends Plugin {
 		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
 		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service);
 		this.searchService = new SearchService(this.app, this.settings);
-		await this.searchService.buildIndex();
+		// await this.searchService.buildIndex();
 
 		this.registerEvent(this.app.vault.on('create', () => {
 			this.searchService.buildIndex();
