@@ -680,6 +680,7 @@ export class MMFDownloader {
                     if (error.name === 'AbortError') throw error;
                     new Notice(`Error downloading ${item.filename}: ${error.message}`);
                     this.logger.error(`Error downloading file ${item.filename}: ${error.message}`);
+                    throw error; // Re-throw the error to be caught by the caller
                 }
             } else {
 				this.logger.info(`Skipping direct download for file ${item.filename}`);

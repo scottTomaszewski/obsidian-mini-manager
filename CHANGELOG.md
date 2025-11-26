@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.6
+
+- Should correctly handle 403s
+
 ## 0.0.5
 
 - validation improvements
