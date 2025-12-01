@@ -81,6 +81,23 @@ export class DownloadManager {
         this.notifyListeners();
     }
 
+    public getCompletedJobsCount(): number {
+        return this.getJobs().filter(job => job.status === 'completed').length;
+    }
+
+    public getFailedJobsCount(): number {
+        return this.getJobs().filter(job => job.status === 'failed').length;
+    }
+
+    public clearFailed() {
+        this.jobs.forEach((job, id) => {
+            if (job.status === 'failed') {
+                this.jobs.delete(id);
+            }
+        });
+        this.notifyListeners();
+    }
+
     public subscribe(listener: (jobs: DownloadJob[]) => void) {
         this.listeners.push(listener);
     }

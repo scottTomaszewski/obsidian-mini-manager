@@ -30,13 +30,20 @@ export class ValidationModal extends Modal {
                 }));
 
         new Setting(contentEl)
-            .addButton(button => button
-                .setButtonText('Retry Selected')
-                .setCta() // Make it a call to action button
-                .onClick(() => this.retrySelected()))
-            .addButton(button => button
-                .setButtonText('Select All Failed')
-                .onClick(() => this.selectAllFailed()));
+            .addButton(button => {
+                const selectedCount = this.selectedResults.length;
+                button
+                    .setButtonText(`Retry Selected (${selectedCount})`)
+                    .setCta()
+                    .setDisabled(selectedCount === 0)
+                    .onClick(() => this.retrySelected());
+            })
+            .addButton(button => {
+                const failedCount = this.results.filter(result => !result.isValid).length;
+                button
+                    .setButtonText(`Select All Failed (${failedCount})`)
+                    .onClick(() => this.selectAllFailed());
+            });
 
         this.resultsContainer = contentEl.createDiv('validation-results-container');
         this.renderResults();
@@ -44,6 +51,22 @@ export class ValidationModal extends Modal {
 
     onClose() {
         this.contentEl.empty();
+    }
+
+    private redrawButtons() {
+        const retryButton = this.contentEl.querySelector('.setting-item-control button:first-child') as HTMLButtonElement;
+        const selectAllButton = this.contentEl.querySelector('.setting-item-control button:nth-child(2)') as HTMLButtonElement;
+
+        if (retryButton) {
+            const selectedCount = this.selectedResults.length;
+            retryButton.textContent = `Retry Selected (${selectedCount})`;
+            retryButton.disabled = selectedCount === 0;
+        }
+
+        if (selectAllButton) {
+            const failedCount = this.results.filter(result => !result.isValid).length;
+            selectAllButton.textContent = `Select All Failed (${failedCount})`;
+        }
     }
 
     private async retrySelected() {
@@ -92,6 +115,7 @@ export class ValidationModal extends Modal {
 
         if (filteredResults.length === 0) {
             this.resultsContainer.createEl('p', { text: 'No validation issues found.' });
+            this.redrawButtons();
             return;
         }
 
@@ -117,6 +141,7 @@ export class ValidationModal extends Modal {
                     } else {
                         this.selectedResults = this.selectedResults.filter(r => r.object.id !== result.object.id);
                     }
+                    this.redrawButtons();
                 });
                 // The checkbox is now prepended to resultEl, before the Setting component
                 // setting.controlEl.prepend(checkbox); // This line is no longer needed
@@ -152,5 +177,4 @@ export class ValidationModal extends Modal {
                     }));
             }
         }
-    }
-}
+        this.redrawButtons();

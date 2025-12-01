@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.11
+
+- Adds more info to buttons
+
 ## 0.0.10
 
 - Faster validation
