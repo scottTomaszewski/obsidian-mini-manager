@@ -182,22 +182,24 @@ export class MMFApiService {
     async getObjectById(objectId: string): Promise<MMFObject> {
         try {
             return await this.apiRequest(`/objects/${objectId}`);
-        } catch (error) {
-            this.logger.error(`Error getting object ${objectId}: ${error.message}`);
-            
-            // Create a fallback object with minimal information and web link
-            const fallbackObject = this.createFallbackObject(objectId);
-            
-            // If we're instructed to throw, rethrow the error
-            if (this.settings.strictApiMode) {
-                throw new Error(`Failed to get object details: ${error.message}`);
-            }
-            
-            // Otherwise, return the fallback object with a warning
-            this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
-            return fallbackObject;
-        }
-    }
+        		} catch (error) {
+        			this.logger.error(`Error getting object ${objectId}: ${error.message}`);
+        			if (error.message.includes("MyMiniFactory access token missing or expired")) {
+        				throw error;
+        			}
+        			
+        			// Create a fallback object with minimal information and web link
+        			const fallbackObject = this.createFallbackObject(objectId);
+        			
+        			// If we're instructed to throw, rethrow the error
+        			if (this.settings.strictApiMode) {
+        				throw new Error(`Failed to get object details: ${error.message}`);
+        			}
+        			
+        			// Otherwise, return the fallback object with a warning
+        			this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
+        			return fallbackObject;
+        		}    }
 
     /**
      * Check if the API key is valid by making a simple API request

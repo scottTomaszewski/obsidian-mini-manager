@@ -125,6 +125,7 @@ export class MMFDownloader {
 					items: []
 				}
 			};
+			throw objectError;
 		}
 
 		const job = this.downloadManager.getJob(objectId) || this.downloadManager.addJob(object);
@@ -589,7 +590,7 @@ export class MMFDownloader {
 				throw new Error(`Failed to download image: ${response.status}`);
 			}
 
-			await this.app.vault.adapter.writeBinary(filePath, response.raw);
+			await this.app.vault.createBinary(filePath, response.arrayBuffer);
 			this.logger.info(`Successfully downloaded ${baseFileName}`);
 			return filePath;
 		} catch (error) {
@@ -657,7 +658,8 @@ export class MMFDownloader {
 					}
 
 					const filePath = normalizePath(`${filesPath}/${item.filename}`);
-					await this.app.vault.adapter.writeBinary(filePath, response.raw);
+					const arrayBuffer = response.arrayBuffer;
+					await this.app.vault.createBinary(filePath, arrayBuffer);
 					new Notice(`Successfully downloaded ${item.filename}`);
 
 					downloadedFiles++;
@@ -667,12 +669,11 @@ export class MMFDownloader {
 						new Notice(`Extracting ${item.filename}...`);
 						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
 						try {
-							await this.extractZipFile(filePath, filesPath, signal); // Pass signal
+							await this.extractZipFile(arrayBuffer, filesPath, signal); // Pass signal
 						} catch (zipError) {
 							if (zipError.name === 'AbortError') throw zipError;
 							this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
-							const fileContent = await this.app.vault.adapter.readBinary(filePath);
-							this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(fileContent.slice(0, 500))}`);
+							this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(arrayBuffer.slice(0, 500))}`);
 							throw zipError; // Re-throw to be caught by the outer catch
 						}
 					}
@@ -688,9 +689,8 @@ export class MMFDownloader {
 		}
 	}
 
-	private async extractZipFile(zipFilePath: string, destinationPath: string, signal: AbortSignal): Promise<void> {
+	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
 		try {
-			const zipData = await this.app.vault.adapter.readBinary(zipFilePath);
 			const zip = await JSZip.loadAsync(zipData);
 			new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
 
