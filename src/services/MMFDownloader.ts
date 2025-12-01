@@ -571,7 +571,7 @@ export class MMFDownloader {
 			const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
 			const filePath = normalizePath(`${folderPath}/${fileName}`);
 
-			new Notice(`Downloading ${baseFileName}...`);
+			// new Notice(`Downloading ${baseFileName}...`);
 			this.logger.info(`Downloading image from URL: ${url}`);
 
 			const response = await requestUrl({
@@ -589,7 +589,7 @@ export class MMFDownloader {
 				throw new Error(`Failed to download image: ${response.status}`);
 			}
 
-			await this.app.vault.createBinary(filePath, response.arrayBuffer);
+			await this.app.vault.adapter.writeBinary(filePath, response.raw);
 			this.logger.info(`Successfully downloaded ${baseFileName}`);
 			return filePath;
 		} catch (error) {
@@ -630,7 +630,7 @@ export class MMFDownloader {
 			// Only attempt direct download if the setting is enabled
 			if (this.settings.useDirectDownload) {
 				try {
-					new Notice(`Downloading file: ${item.filename}...`);
+					// new Notice(`Downloading file: ${item.filename}...`);
 					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
 
 					const accessToken = await this.oauth2Service.getAccessToken();
@@ -657,8 +657,7 @@ export class MMFDownloader {
 					}
 
 					const filePath = normalizePath(`${filesPath}/${item.filename}`);
-					const arrayBuffer = response.arrayBuffer;
-					await this.app.vault.createBinary(filePath, arrayBuffer);
+					await this.app.vault.adapter.writeBinary(filePath, response.raw);
 					new Notice(`Successfully downloaded ${item.filename}`);
 
 					downloadedFiles++;
@@ -668,11 +667,12 @@ export class MMFDownloader {
 						new Notice(`Extracting ${item.filename}...`);
 						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
 						try {
-							await this.extractZipFile(arrayBuffer, filesPath, signal); // Pass signal
+							await this.extractZipFile(filePath, filesPath, signal); // Pass signal
 						} catch (zipError) {
 							if (zipError.name === 'AbortError') throw zipError;
 							this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
-							this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(arrayBuffer.slice(0, 500))}`);
+							const fileContent = await this.app.vault.adapter.readBinary(filePath);
+							this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(fileContent.slice(0, 500))}`);
 							throw zipError; // Re-throw to be caught by the outer catch
 						}
 					}
@@ -688,8 +688,9 @@ export class MMFDownloader {
 		}
 	}
 
-	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
+	private async extractZipFile(zipFilePath: string, destinationPath: string, signal: AbortSignal): Promise<void> {
 		try {
+			const zipData = await this.app.vault.adapter.readBinary(zipFilePath);
 			const zip = await JSZip.loadAsync(zipData);
 			new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
 
