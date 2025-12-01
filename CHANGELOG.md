@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.9
+
+- Better error handling
+
 ## 0.0.6
 
 - Should correctly handle 403s
