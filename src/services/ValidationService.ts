@@ -19,7 +19,6 @@ export class ValidationService {
     }
 
     public async validate(): Promise<ValidationResult[]> {
-        const results: ValidationResult[] = [];
         const downloadPath = this.settings.downloadPath;
         const adapter = this.app.vault.adapter;
 
@@ -28,6 +27,7 @@ export class ValidationService {
         }
 
         const designerFolders = await adapter.list(downloadPath);
+        const validationPromises: Promise<ValidationResult>[] = [];
 
         for (const designerFolder of designerFolders.folders) {
             const objectFolders = await adapter.list(designerFolder);
@@ -35,15 +35,17 @@ export class ValidationService {
             for (const objectFolder of objectFolders.folders) {
                 const metadataPath = `${objectFolder}/mmf-metadata.json`;
                 if (await adapter.exists(metadataPath)) {
-                    const metadataContent = await adapter.read(metadataPath);
-                    const object = JSON.parse(metadataContent) as MMFObject;
-                    const result = await this.validateObject(object, objectFolder);
-                    results.push(result);
+                    const validationPromise = (async () => {
+                        const metadataContent = await adapter.read(metadataPath);
+                        const object = JSON.parse(metadataContent) as MMFObject;
+                        return this.validateObject(object, objectFolder);
+                    })();
+                    validationPromises.push(validationPromise);
                 }
             }
         }
 
-        return results;
+        return Promise.all(validationPromises);
     }
 
     private async validateObject(object: MMFObject, folderPath: string): Promise<ValidationResult> {

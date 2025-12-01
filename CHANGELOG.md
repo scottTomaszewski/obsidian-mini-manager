@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.10
+
+- Faster validation
+
 ## 0.0.9
 
 - Better error handling
