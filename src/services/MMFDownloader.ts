@@ -604,7 +604,7 @@ export class MMFDownloader {
 			const filePath = normalizePath(`${folderPath}/${fileName}`);
 
 			if (await this.fileExists(filePath)) {
-				this.logger.info(`Image ${filePath} already exists, skipping download.`);
+				this.logger.info(`Skipping download of image ${filePath}: already exists.`);
 				return filePath;
 			}
 
@@ -669,8 +669,13 @@ export class MMFDownloader {
 			// Only attempt direct download if the setting is enabled
 			if (this.settings.useDirectDownload) {
 				try {
-					// new Notice(`Downloading file: ${item.filename}...`);
 					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
+					const filePath = normalizePath(`${filesPath}/${item.filename}`);
+					if (await this.fileExists(filePath)) {
+						this.logger.info(`Skipping download of file ${filePath}: already exists.`);
+						downloadedFiles++;
+						continue;
+					}
 
 					const accessToken = await this.oauth2Service.getAccessToken();
 					const headers: Record<string, string> = {
@@ -684,6 +689,7 @@ export class MMFDownloader {
 						url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
 					}
 
+					this.logger.info(`Downloading file at: ${url}`);
 					const response = await requestUrl({
 						url: url,
 						method: 'GET',
@@ -693,13 +699,6 @@ export class MMFDownloader {
 
 					if (response.status !== 200) {
 						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
-					}
-
-					const filePath = normalizePath(`${filesPath}/${item.filename}`);
-					if (await this.fileExists(filePath)) {
-						this.logger.info(`Skipping download of file ${filePath}: already exists.`);
-						downloadedFiles++;
-						continue;
 					}
 
 					const arrayBuffer = response.arrayBuffer;
