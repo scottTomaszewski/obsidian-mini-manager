@@ -3,6 +3,8 @@
 ## 0.0.11
 
 - Adds more info to buttons
+- Better handling of repeat downloads
+- Adds bulk download feature (create `bulk-downloads.txt` in the plugin's root dir)
 
 ## 0.0.10
 
