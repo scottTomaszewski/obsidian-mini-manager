@@ -1,4 +1,4 @@
-import {Plugin, Notice, Modal, Setting, TFolder, TFile, normalizePath} from 'obsidian';
+import {Plugin, Notice} from 'obsidian';
 import {
 	MiniManagerSettings,
 	DEFAULT_SETTINGS,
@@ -66,6 +66,14 @@ export default class MiniManagerPlugin extends Plugin {
 			name: 'Open Download Manager',
 			callback: () => {
 				new DownloadManagerModal(this.app, this).open();
+			}
+		});
+
+		this.addCommand({
+			id: 'start-bulk-download',
+			name: 'Start bulk download from file',
+			callback: () => {
+				this.downloader.startBulkDownload();
 			}
 		});
 

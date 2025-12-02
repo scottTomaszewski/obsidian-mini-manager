@@ -1,7 +1,7 @@
 import { App, Notice, TFile, TFolder, normalizePath, requestUrl, stringifyYaml } from "obsidian";
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
-import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
+import { MMFObject } from "../models/MMFObject";
 import * as JSZip from "jszip";
 import { DownloadManager, DownloadJob } from "./DownloadManager";
 import { LoggerService } from "./LoggerService";
@@ -56,13 +56,45 @@ export class MMFDownloader {
 				this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
 				await this.validationService.deleteObjectFolder(validationResult.folderPath);
 				this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
-				this.downloadQueue.push(objectId);
-				this._processQueue();
-			}
+						this.downloadQueue.push(objectId);
+						this._processQueue();
+					}
+				
+
+				
 		} else {
 			this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
 			this.downloadQueue.push(objectId);
 			this._processQueue();
+		}
+	}
+
+	public async startBulkDownload(): Promise<void> {
+		const bulkFilePath = normalizePath(`${this.app.vault.configDir}/plugins/mini-manager/bulk-downloads.txt`);
+		if (!await this.app.vault.adapter.exists(bulkFilePath)) {
+			new Notice(`Bulk download file not found at ${bulkFilePath}`);
+			return;
+		}
+
+		new Notice('Starting bulk download...');
+		const fileContent = await this.app.vault.adapter.read(bulkFilePath);
+		const ids = fileContent.split(',').map(id => id.trim()).filter(id => id);
+
+		for (const id of ids) {
+			const existingJob = this.downloadManager.getJob(id);
+			if (existingJob) {
+				if (existingJob.status === 'completed') {
+					this.logger.info(`Skipping already completed job ${id}`);
+					continue;
+				} else if (existingJob.status === 'failed') {
+					this.logger.info(`Retrying failed job ${id}`);
+					this.downloadManager.removeJob(id);
+				} else {
+					this.logger.info(`Skipping already queued job ${id}`);
+					continue;
+				}
+			}
+			await this.downloadObject(id);
 		}
 	}
 
