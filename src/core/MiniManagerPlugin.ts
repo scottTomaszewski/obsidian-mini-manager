@@ -11,6 +11,7 @@ import { MMFSearchModal } from '../ui/MMFSearchModal';
 import { SearchService } from '../services/SearchService';
 import { LoggerService } from '../services/LoggerService';
 import { OAuth2Service } from '../services/OAuth2Service';
+import {ValidationService} from "../services/ValidationService";
 
 export default class MiniManagerPlugin extends Plugin {
 	settings: MiniManagerSettings;
@@ -30,7 +31,8 @@ export default class MiniManagerPlugin extends Plugin {
 		// Initialize services
 		this.oauth2Service = new OAuth2Service(this.settings, this.logger);
 		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
-		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service);
+		const validationService = new ValidationService(this.app, this.settings);
+		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service, validationService);
 		this.searchService = new SearchService(this.app, this.settings);
 		// await this.searchService.buildIndex();
 
