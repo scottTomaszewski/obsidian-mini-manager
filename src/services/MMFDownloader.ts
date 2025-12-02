@@ -5,7 +5,8 @@ import { MMFObject, MMFObjectFile, MMFObjectImage } from "../models/MMFObject";
 import * as JSZip from "jszip";
 import { DownloadManager, DownloadJob } from "./DownloadManager";
 import { LoggerService } from "./LoggerService";
-import { OAuth2Service } from "./OAuth2Service"; // Import OAuth2Service
+import { OAuth2Service } from "./OAuth2Service";
+import { ValidationService } from "./ValidationService";
 
 export class MMFDownloader {
 	private app: App;
@@ -14,25 +15,25 @@ export class MMFDownloader {
 	private downloadManager: DownloadManager;
 	private logger: LoggerService;
 	private oauth2Service: OAuth2Service;
+	private validationService: ValidationService;
 	private downloadQueue: string[] = [];
 	private activeDownloads: number = 0;
 	private cancellationTokens: Map<string, AbortController> = new Map(); // For actual request cancellation
 
-	constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
+	constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service, validationService: ValidationService) {
 		this.app = app;
 		this.settings = settings;
 		this.logger = logger;
 		this.oauth2Service = oauth2Service;
+		this.validationService = validationService;
 		this.apiService = new MMFApiService(settings, logger, oauth2Service);
 		this.downloadManager = DownloadManager.getInstance();
 	}
 
 	public async downloadObject(objectId: string): Promise<void> {
-		this.downloadQueue.push(objectId);
-		// Create a temporary object to add to the download manager
 		const tempObject: MMFObject = {
 			id: objectId,
-			name: `Queued Object ${objectId}`,
+			name: `Validating Object ${objectId}`,
 			description: '',
 			url: '',
 			images: [],
@@ -41,9 +42,28 @@ export class MMFDownloader {
 				items: []
 			}
 		};
+
 		const job = this.downloadManager.addJob(tempObject);
-		this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
-		this._processQueue();
+		this.downloadManager.updateJob(job.id, 'downloading', 5, 'Validating...');
+
+		const validationResult = await this.validationService.validateAndGetResult(objectId);
+
+		if (validationResult) {
+			if (validationResult.isValid) {
+				this.downloadManager.updateJob(job.id, 'completed', 100, 'Model already downloaded and valid');
+				new Notice(`Model ${validationResult.object.name} already downloaded and valid.`);
+			} else {
+				this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
+				await this.validationService.deleteObjectFolder(validationResult.folderPath);
+				this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
+				this.downloadQueue.push(objectId);
+				this._processQueue();
+			}
+		} else {
+			this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
+			this.downloadQueue.push(objectId);
+			this._processQueue();
+		}
 	}
 
 	public cancelDownload(objectId: string): void {
@@ -270,25 +290,27 @@ export class MMFDownloader {
 
 				// Create emergency instructions
 				const instructionsPath = normalizePath(`${objectFolder}/API_ERROR.md`);
-				let content = `# MyMiniFactory API Error\n\n`;
-				content += `## Error Details\n\n`;
-				content += `Failed to download object ID: ${objectId}\n\n`;
-				content += `Error: ${error.message}\n\n`;
-				content += `Time: ${new Date().toLocaleString()}\n\n`;
-				content += `## Possible Solutions\n\n`;
-				content += `1. **Check your API key** in the plugin settings\n`;
-				content += `2. **Verify the object ID** is correct: ${objectId}\n`;
-				content += `3. **Try again later** as this might be a temporary API issue\n`;
-				content += `4. **Visit the object directly** on MyMiniFactory: [Object ${objectId}](https://www.myminifactory.com/object/${objectId})\n`;
-				content += `5. **Check for plugin updates** as the API might have changed\n\n`;
-				content += `## Manual Download\n\n`;
-				content += `If the API continues to fail, you can manually download the object:\n\n`;
-				content += `1. Visit [MyMiniFactory](https://www.myminifactory.com)\n`;
-				content += `2. Search for the object ID: ${objectId}\n`;
-				content += `3. Download the files manually\n`;
-				content += `4. Place them in the files subfolder of this directory\n`;
+				if (!await this.fileExists(instructionsPath)) {
+					let content = `# MyMiniFactory API Error\n\n`;
+					content += `## Error Details\n\n`;
+					content += `Failed to download object ID: ${objectId}\n\n`;
+					content += `Error: ${error.message}\n\n`;
+					content += `Time: ${new Date().toLocaleString()}\n\n`;
+					content += `## Possible Solutions\n\n`;
+					content += `1. **Check your API key** in the plugin settings\n`;
+					content += `2. **Verify the object ID** is correct: ${objectId}\n`;
+					content += `3. **Try again later** as this might be a temporary API issue\n`;
+					content += `4. **Visit the object directly** on MyMiniFactory: [Object ${objectId}](https://www.myminifactory.com/object/${objectId})\n`;
+					content += `5. **Check for plugin updates** as the API might have changed\n\n`;
+					content += `## Manual Download\n\n`;
+					content += `If the API continues to fail, you can manually download the object:\n\n`;
+					content += `1. Visit [MyMiniFactory](https://www.myminifactory.com)\n`;
+					content += `2. Search for the object ID: ${objectId}\n`;
+					content += `3. Download the files manually\n`;
+					content += `4. Place them in the files subfolder of this directory\n`;
 
-				await this.app.vault.create(instructionsPath, content);
+					await this.app.vault.create(instructionsPath, content);
+				}
 			} catch (emergencyError) {
 				this.logger.error(`Failed to create emergency instructions: ${emergencyError.message}`);
 			}
@@ -341,7 +363,9 @@ export class MMFDownloader {
 
 		instructionsContent += `Try updating the plugin or checking the [MyMiniFactory API documentation](https://www.myminifactory.com/settings/developer) for more information.`;
 
-		await this.app.vault.create(instructionsPath, instructionsContent);
+		if (!await this.fileExists(instructionsPath)) {
+			await this.app.vault.create(instructionsPath, instructionsContent);
+		}
 		this.logger.info("Created emergency download instructions file");
 	}
 
@@ -440,7 +464,12 @@ export class MMFDownloader {
 			});
 		}
 
-		await this.app.vault.create(filePath, content);
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		if (file && file instanceof TFile) {
+			await this.app.vault.modify(file, content);
+		} else {
+			await this.app.vault.create(filePath, content);
+		}
 	}
 
 	/**
@@ -558,7 +587,9 @@ export class MMFDownloader {
 			this.logger.info("No images were downloaded, creating placeholder");
 			const placeholderPath = normalizePath(`${imagesPath}/no_images.md`);
 			const placeholderContent = `# No Images Available\n\nNo images could be downloaded for this object.\n\nPlease visit the original page to view images:\n${object.url}`;
-			await this.app.vault.create(placeholderPath, placeholderContent);
+			if (!await this.fileExists(placeholderPath)) {
+				await this.app.vault.create(placeholderPath, placeholderContent);
+			}
 		}
 
 		return mainLocalImagePath;
@@ -571,6 +602,11 @@ export class MMFDownloader {
 		try {
 			const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
 			const filePath = normalizePath(`${folderPath}/${fileName}`);
+
+			if (await this.fileExists(filePath)) {
+				this.logger.info(`Image ${filePath} already exists, skipping download.`);
+				return filePath;
+			}
 
 			// new Notice(`Downloading ${baseFileName}...`);
 			this.logger.info(`Downloading image from URL: ${url}`);
@@ -601,7 +637,9 @@ export class MMFDownloader {
 			// Create a placeholder file with instructions if download fails
 			const placeholderPath = normalizePath(`${folderPath}/${baseFileName}_error.md`);
 			const placeholderContent = `# Download Error\n\nFailed to download image from: ${url}\n\nError: ${error.message}\n\nPlease visit the MyMiniFactory website to view this image.`;
-			await this.app.vault.create(placeholderPath, placeholderContent);
+			if (!await this.fileExists(placeholderPath)) {
+				await this.app.vault.create(placeholderPath, placeholderContent);
+			}
 			return undefined;
 		}
 	}
@@ -658,6 +696,12 @@ export class MMFDownloader {
 					}
 
 					const filePath = normalizePath(`${filesPath}/${item.filename}`);
+					if (await this.fileExists(filePath)) {
+						this.logger.info(`Skipping download of file ${filePath}: already exists.`);
+						downloadedFiles++;
+						continue;
+					}
+
 					const arrayBuffer = response.arrayBuffer;
 					await this.app.vault.createBinary(filePath, arrayBuffer);
 					new Notice(`Successfully downloaded ${item.filename}`);
@@ -709,6 +753,10 @@ export class MMFDownloader {
 					}
 					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
+					if (await this.fileExists(filePath)) {
+						this.logger.info(`File ${filePath} already exists, skipping extraction.`);
+						continue;
+					}
 					await this.app.vault.createBinary(filePath, content);
 				}
 			}
@@ -722,7 +770,12 @@ export class MMFDownloader {
 
 	private async saveMetadataFile(object: MMFObject, folderPath: string): Promise<void> {
 		const filePath = normalizePath(`${folderPath}/mmf-metadata.json`);
-		await this.app.vault.create(filePath, JSON.stringify(object, null, 2));
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		if (file && file instanceof TFile) {
+			await this.app.vault.modify(file, JSON.stringify(object, null, 2));
+		} else {
+			await this.app.vault.create(filePath, JSON.stringify(object, null, 2));
+		}
 	}
 
 	// Helper methods
@@ -730,6 +783,15 @@ export class MMFDownloader {
 		try {
 			const folder = this.app.vault.getAbstractFileByPath(path);
 			return folder instanceof TFolder;
+		} catch (error) {
+			return false;
+		}
+	}
+
+	private async fileExists(path: string): Promise<boolean> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(path);
+			return file instanceof TFile;
 		} catch (error) {
 			return false;
 		}

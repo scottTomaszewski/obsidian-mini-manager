@@ -48,16 +48,22 @@ export class ValidationService {
         return Promise.all(validationPromises);
     }
 
-    public async validateObjectById(objectId: string): Promise<ValidationResult | null> {
-        const objectFolder = await this.findObjectFolder(objectId);
-        if (objectFolder) {
-            const metadataPath = `${objectFolder}/mmf-metadata.json`;
-            const metadataContent = await this.app.vault.adapter.read(metadataPath);
-            const object = JSON.parse(metadataContent) as MMFObject;
-            return this.validateObject(object, objectFolder);
-        }
-        return null;
-    }
+	public async validateAndGetResult(objectId: string): Promise<ValidationResult | null> {
+		const objectFolder = await this.findObjectFolder(objectId);
+		if (objectFolder) {
+			const metadataPath = `${objectFolder}/mmf-metadata.json`;
+			if (await this.app.vault.adapter.exists(metadataPath)) {
+				const metadataContent = await this.app.vault.adapter.read(metadataPath);
+				const object = JSON.parse(metadataContent) as MMFObject;
+				return this.validateObject(object, objectFolder);
+			}
+		}
+		return null;
+	}
+
+	public async deleteObjectFolder(folderPath: string): Promise<void> {
+		await this.app.vault.adapter.rmdir(folderPath, true);
+	}
 
     private async findObjectFolder(objectId: string): Promise<string | null> {
         const downloadPath = this.settings.downloadPath;
