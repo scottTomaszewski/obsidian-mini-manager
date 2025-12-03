@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.13
+
+- Better validation and fixes retry button issue
+
 ## 0.0.12
 
 - Attempts to fix arrayBuffer issue
