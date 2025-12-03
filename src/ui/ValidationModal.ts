@@ -35,7 +35,8 @@ export class ValidationModal extends Modal {
 				button
 					.setButtonText(`Retry Selected (${selectedCount})`)
 					.setCta()
-					.setDisabled(selectedCount === 0)
+					// disabling the button from the buttonEl doesnt seem to work.  I need to disable from the buttonComponent
+					// .setDisabled(selectedCount === 0)
 					.onClick(() => this.retrySelected());
 			})
 			.addButton(button => {
@@ -60,7 +61,7 @@ export class ValidationModal extends Modal {
 		if (retryButton) {
 			const selectedCount = this.selectedResults.length;
 			retryButton.textContent = `Retry Selected (${selectedCount})`;
-			retryButton.disabled = selectedCount === 0;
+			// retryButton.setDisabled(selectedCount === 0);
 		}
 
 		if (selectAllButton) {
