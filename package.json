@@ -1,6 +1,6 @@
 {
   "name": "obsidian-mini-manager",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "An Obsidian plugin to download and manage 3D models from MyMiniFactory",
   "main": "main.js",
   "scripts": {
