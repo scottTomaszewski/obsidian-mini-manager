@@ -755,6 +755,11 @@ export class MMFDownloader {
 						return this.downloadFile(response.headers.location, filePath, signal).then(resolve).catch(reject);
 					}
 
+					const contentType = response.headers['content-type'];
+					if (contentType && contentType.includes('text/html')) {
+						return reject(new Error('Invalid content type: received text/html. This may be a login redirect.'));
+					}
+
 					response.pipe(file);
 					file.on('finish', () => {
 						file.close();
@@ -774,6 +779,12 @@ export class MMFDownloader {
 			if (response.status !== 200) {
 				throw new Error(`Failed to download file: ${response.status}`);
 			}
+
+			const contentType = response.headers['content-type'];
+			if (contentType && contentType.includes('text/html')) {
+				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
+			}
+
 			await this.app.vault.createBinary(filePath, response.arrayBuffer);
 		}
 	}

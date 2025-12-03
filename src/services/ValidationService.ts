@@ -127,10 +127,15 @@ export class ValidationService {
         if (this.settings.downloadFiles && object.files && object.files.items.length > 0) {
             if (await adapter.exists(filesPath)) {
                 const downloadedFiles = await adapter.list(filesPath);
-                const expectedFiles = object.files.items.map(f => `${filesPath}/${f.filename}`);
-                for (const expectedFile of expectedFiles) {
-                    if (!downloadedFiles.files.includes(expectedFile)) {
-                        errors.push(`Missing file: ${expectedFile}`);
+                for (const item of object.files.items) {
+                    const expectedFilePath = `${filesPath}/${item.filename}`;
+                    if (!downloadedFiles.files.includes(expectedFilePath)) {
+                        errors.push(`Missing file: ${item.filename}`);
+                    } else if (item.filename.toLowerCase().endsWith('.zip') || item.filename.toLowerCase().endsWith('.html')) {
+                        // Check if a zip file is actually an HTML file
+                        if (await this.isHtmlFile(expectedFilePath)) {
+                            errors.push(`File ${item.filename} is HTML content, not a valid file (possible login redirect).`);
+                        }
                     }
                 }
             } else {
@@ -145,4 +150,23 @@ export class ValidationService {
             errors,
         };
     }
+
+	private async isHtmlFile(filePath: string): Promise<boolean> {
+		const adapter = this.app.vault.adapter;
+		try {
+			// Read the first 512 bytes for content sniffing
+			// Obsidian's read() method reads the entire file, which is okay for this purpose for smaller files.
+			// For very large files, this would be inefficient, but HTML redirects are usually small.
+			const content = await adapter.read(filePath);
+			// Check for common HTML patterns at the beginning of the file
+			const trimmedContent = content.trimLeft();
+			return trimmedContent.startsWith('<!DOCTYPE html') ||
+				trimmedContent.startsWith('<html') ||
+				trimmedContent.startsWith('<head') ||
+				trimmedContent.startsWith('<body');
+		} catch (error) {
+			this.app.console.error(`Error reading file for HTML check: ${filePath}`, error);
+			return false;
+		}
+	}
 }
