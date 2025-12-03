@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, Platform } from 'obsidian';
 import { MiniManagerSettings } from '../settings/MiniManagerSettings';
 import { MMFObject } from '../models/MMFObject';
 
@@ -154,16 +154,43 @@ export class ValidationService {
 	private async isHtmlFile(filePath: string): Promise<boolean> {
 		const adapter = this.app.vault.adapter;
 		try {
-			// Read the first 512 bytes for content sniffing
-			// Obsidian's read() method reads the entire file, which is okay for this purpose for smaller files.
-			// For very large files, this would be inefficient, but HTML redirects are usually small.
-			const content = await adapter.read(filePath);
-			// Check for common HTML patterns at the beginning of the file
-			const trimmedContent = content.trimLeft();
-			return trimmedContent.startsWith('<!DOCTYPE html') ||
-				trimmedContent.startsWith('<html') ||
-				trimmedContent.startsWith('<head') ||
-				trimmedContent.startsWith('<body');
+			if (Platform.isDesktop) {
+				const fs = require('fs');
+				const fullPath = this.app.vault.adapter.getFullPath(filePath);
+				return new Promise((resolve) => {
+					const stream = fs.createReadStream(fullPath, { start: 0, end: 511 });
+					let data = '';
+					stream.on('data', (chunk: Buffer) => {
+						data += chunk.toString('utf-8');
+					});
+					stream.on('end', () => {
+						const trimmedContent = data.trimLeft().toLowerCase();
+						resolve(
+							trimmedContent.startsWith('<!doctype html') ||
+							trimmedContent.startsWith('<html') ||
+							trimmedContent.startsWith('<head') ||
+							trimmedContent.startsWith('<body')
+						);
+					});
+					stream.on('error', (err) => {
+						this.app.console.error(`Error reading file for HTML check: ${filePath}`, err);
+						resolve(false);
+					});
+				});
+
+			} else {
+				// On mobile, avoid reading huge files. HTML redirects should be small.
+				const fileStat = await adapter.stat(filePath);
+				if (fileStat && fileStat.size > 1024 * 1024) { // 1MB limit on mobile
+					return false; // Assume large files are not HTML
+				}
+				const content = await adapter.read(filePath);
+				const trimmedContent = content.trimLeft().toLowerCase();
+				return trimmedContent.startsWith('<!doctype html') ||
+					trimmedContent.startsWith('<html') ||
+					trimmedContent.startsWith('<head') ||
+					trimmedContent.startsWith('<body');
+			}
 		} catch (error) {
 			this.app.console.error(`Error reading file for HTML check: ${filePath}`, error);
 			return false;
