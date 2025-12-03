@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.12
+
+- Attempts to fix arrayBuffer issue
+
 ## 0.0.11
 
 - Adds more info to buttons

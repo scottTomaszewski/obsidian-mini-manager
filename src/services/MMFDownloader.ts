@@ -1,4 +1,4 @@
-import { App, Notice, TFile, TFolder, normalizePath, requestUrl, stringifyYaml } from "obsidian";
+import { App, Notice, TFile, TFolder, normalizePath, requestUrl, stringifyYaml, Platform } from "obsidian";
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject } from "../models/MMFObject";
@@ -56,12 +56,9 @@ export class MMFDownloader {
 				this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
 				await this.validationService.deleteObjectFolder(validationResult.folderPath);
 				this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
-						this.downloadQueue.push(objectId);
-						this._processQueue();
-					}
-				
-
-				
+				this.downloadQueue.push(objectId);
+				this._processQueue();
+			}
 		} else {
 			this.downloadManager.updateJob(job.id, 'pending', 0, 'In queue...');
 			this.downloadQueue.push(objectId);
@@ -710,33 +707,14 @@ export class MMFDownloader {
 					}
 
 					const accessToken = await this.oauth2Service.getAccessToken();
-					const headers: Record<string, string> = {
-						'Cache-Control': 'no-cache',
-						'Pragma': 'no-cache',
-						'Expires': '0',
-					};
-
 					let url = item.download_url;
 					if (accessToken) {
 						url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
 					}
 
-					this.logger.info(`Downloading file at: ${url}`);
-					const response = await requestUrl({
-						url: url,
-						method: 'GET',
-						headers: headers,
-						signal: signal // Pass signal here
-					});
+					await this.downloadFile(url, filePath, signal);
 
-					if (response.status !== 200) {
-						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
-					}
-
-					const arrayBuffer = response.arrayBuffer;
-					await this.app.vault.createBinary(filePath, arrayBuffer);
 					new Notice(`Successfully downloaded ${item.filename}`);
-
 					downloadedFiles++;
 
 					if (item.filename.toLowerCase().endsWith('.zip')) {
@@ -744,11 +722,11 @@ export class MMFDownloader {
 						new Notice(`Extracting ${item.filename}...`);
 						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
 						try {
-							await this.extractZipFile(arrayBuffer, filesPath, signal); // Pass signal
+							const zipData = await this.app.vault.adapter.readBinary(filePath);
+							await this.extractZipFile(zipData, filesPath, signal); // Pass signal
 						} catch (zipError) {
 							if (zipError.name === 'AbortError') throw zipError;
 							this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
-							this.logger.debug(`Downloaded content for failed zip extraction (first 500 chars):\n${new TextDecoder().decode(arrayBuffer.slice(0, 500))}`);
 							throw zipError; // Re-throw to be caught by the outer catch
 						}
 					}
@@ -761,6 +739,42 @@ export class MMFDownloader {
 			} else {
 				this.logger.info(`Skipping direct download for file ${item.filename}`);
 			}
+		}
+	}
+
+	private async downloadFile(url: string, filePath: string, signal: AbortSignal): Promise<void> {
+		if (Platform.isDesktop) {
+			const fs = require('fs');
+			const https = require('https');
+			const fullPath = this.app.vault.adapter.getFullPath(filePath);
+			const file = fs.createWriteStream(fullPath);
+
+			return new Promise((resolve, reject) => {
+				https.get(url, { signal: signal }, (response: any) => {
+					if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+						return this.downloadFile(response.headers.location, filePath, signal).then(resolve).catch(reject);
+					}
+
+					response.pipe(file);
+					file.on('finish', () => {
+						file.close();
+						resolve();
+					});
+				}).on('error', (err: any) => {
+					fs.unlink(fullPath, () => reject(err));
+				});
+			});
+		} else {
+			const response = await requestUrl({
+				url: url,
+				method: 'GET',
+				signal: signal
+			});
+
+			if (response.status !== 200) {
+				throw new Error(`Failed to download file: ${response.status}`);
+			}
+			await this.app.vault.createBinary(filePath, response.arrayBuffer);
 		}
 	}
 
