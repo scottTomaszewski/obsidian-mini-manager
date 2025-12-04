@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.14
+
+- Fixing download issues
+
 ## 0.0.13
 
 - Better validation and fixes retry button issue
