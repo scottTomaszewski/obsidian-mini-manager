@@ -683,6 +683,12 @@ export class MMFDownloader {
 				throw new Error(`Failed to download image: ${response.status}`);
 			}
 
+			const contentType = response.headers['content-type'];
+			if (contentType && contentType.includes('text/html')) {
+				this.handleAuthError();
+				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
+			}
+
 			await this.app.vault.createBinary(filePath, response.arrayBuffer);
 			this.logger.info(`Successfully downloaded ${baseFileName}`);
 			return filePath;
@@ -735,14 +741,38 @@ export class MMFDownloader {
 					}
 
 					const accessToken = await this.oauth2Service.getAccessToken();
+					const headers: Record<string, string> = {
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
+						'Expires': '0',
+					};
+
 					let url = item.download_url;
 					if (accessToken) {
 						url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
 					}
 
-					await this.downloadFile(url, filePath, signal, {}, object.url);
+					const response = await requestUrl({
+						url: url,
+						method: 'GET',
+						headers: headers,
+						signal: signal // Pass signal here
+					});
 
+					if (response.status !== 200) {
+						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
+					}
+
+					const contentType = response.headers['content-type'];
+					if (contentType && contentType.includes('text/html')) {
+						this.handleAuthError();
+						throw new Error('Invalid content type: received text/html. This may be a login redirect.');
+					}
+
+					const arrayBuffer = response.arrayBuffer;
+					await this.app.vault.createBinary(filePath, arrayBuffer);
 					new Notice(`Successfully downloaded ${item.filename}`);
+
 					downloadedFiles++;
 
 					if (item.filename.toLowerCase().endsWith('.zip')) {
@@ -767,79 +797,6 @@ export class MMFDownloader {
 			} else {
 				this.logger.info(`Skipping direct download for file ${item.filename}`);
 			}
-		}
-	}
-
-	private async downloadFile(url: string, filePath: string, signal: AbortSignal, headers: Record<string, string> = {}, referer?: string): Promise<void> {
-		this.logger.info(`Downloading file: ${url}`);
-
-		// Add a comprehensive set of browser-like headers
-		headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36';
-		headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9';
-		headers['Accept-Language'] = 'en-US,en;q=0.9';
-		headers['Accept-Encoding'] = 'gzip, deflate, br';
-		headers['Connection'] = 'keep-alive';
-		headers['Upgrade-Insecure-Requests'] = '1';
-		headers['Sec-Fetch-Dest'] = 'document';
-		headers['Sec-Fetch-Mode'] = 'navigate';
-		headers['Sec-Fetch-Site'] = 'none';
-		headers['Sec-Fetch-User'] = '?1';
-		if (referer) {
-			headers['Referer'] = referer;
-		}
-
-
-		if (Platform.isDesktop) {
-			const fs = require('fs');
-			const https = require('https');
-			const fullPath = this.app.vault.adapter.getFullPath(filePath);
-			const file = fs.createWriteStream(fullPath);
-
-			return new Promise((resolve, reject) => {
-				https.get(url, { headers: headers, signal: signal }, (response: any) => {
-					if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-						file.close();
-						return this.downloadFile(response.headers.location, filePath, signal, headers).then(resolve).catch(reject);
-					}
-
-					const contentType = response.headers['content-type'];
-					if (contentType && contentType.includes('text/html')) {
-						file.close();
-						fs.unlink(fullPath, () => {
-							this.handleAuthError();
-							reject(new Error('Invalid content type: received text/html. This may be a login redirect.'));
-						});
-						return;
-					}
-
-					response.pipe(file);
-					file.on('finish', () => {
-						file.close(resolve as any);
-					});
-				}).on('error', (err: any) => {
-					file.close();
-					fs.unlink(fullPath, () => reject(err));
-				});
-			});
-		} else {
-			const response = await requestUrl({
-				url: url,
-				method: 'GET',
-				headers: headers,
-				signal: signal
-			});
-
-			if (response.status !== 200) {
-				throw new Error(`Failed to download file: ${response.status}`);
-			}
-
-			const contentType = response.headers['content-type'];
-			if (contentType && contentType.includes('text/html')) {
-				this.handleAuthError();
-				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
-			}
-
-			await this.app.vault.createBinary(filePath, response.arrayBuffer);
 		}
 	}
 
