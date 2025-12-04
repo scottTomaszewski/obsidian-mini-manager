@@ -19,6 +19,7 @@ export class MMFDownloader {
 	private downloadQueue: string[] = [];
 	private activeDownloads: number = 0;
 	private cancellationTokens: Map<string, AbortController> = new Map(); // For actual request cancellation
+	private isPaused: boolean = false;
 
 	constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service, validationService: ValidationService) {
 		this.app = app;
@@ -30,7 +31,31 @@ export class MMFDownloader {
 		this.downloadManager = DownloadManager.getInstance();
 	}
 
+	public resumeDownloads(): void {
+		if (this.isPaused) {
+			this.isPaused = false;
+			new Notice('Resuming downloads...');
+			this._processQueue();
+		} else {
+			new Notice('Downloads are not paused.');
+		}
+	}
+
+	private handleAuthError(): void {
+		this.isPaused = true;
+		const notice = new Notice('MyMiniFactory authentication expired. Please re-authenticate in the settings.', 0);
+		const settingsButton = notice.noticeEl.createEl('button', {text: 'Open Settings'});
+		settingsButton.addEventListener('click', () => {
+			this.app.setting.open();
+			this.app.setting.openTabById('mini-manager');
+		});
+	}
+
 	public async downloadObject(objectId: string): Promise<void> {
+		if (this.isPaused) {
+			new Notice('Downloads are paused. Please re-authenticate and resume.');
+			return;
+		}
 		const tempObject: MMFObject = {
 			id: objectId,
 			name: `Validating Object ${objectId}`,
@@ -111,6 +136,9 @@ export class MMFDownloader {
 	}
 
 	private async _processQueue(): Promise<void> {
+		if (this.isPaused) {
+			return;
+		}
 		if (this.activeDownloads >= this.settings.maxConcurrentDownloads) {
 			return;
 		}
@@ -777,7 +805,10 @@ export class MMFDownloader {
 					const contentType = response.headers['content-type'];
 					if (contentType && contentType.includes('text/html')) {
 						file.close();
-						fs.unlink(fullPath, () => reject(new Error('Invalid content type: received text/html. This may be a login redirect.')));
+						fs.unlink(fullPath, () => {
+							this.handleAuthError();
+							reject(new Error('Invalid content type: received text/html. This may be a login redirect.'));
+						});
 						return;
 					}
 
@@ -804,6 +835,7 @@ export class MMFDownloader {
 
 			const contentType = response.headers['content-type'];
 			if (contentType && contentType.includes('text/html')) {
+				this.handleAuthError();
 				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
 			}
 

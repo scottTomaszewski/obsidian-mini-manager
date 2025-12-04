@@ -70,6 +70,14 @@ export default class MiniManagerPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'resume-downloads',
+			name: 'Resume Downloads',
+			callback: () => {
+				this.downloader.resumeDownloads();
+			}
+		});
+
+		this.addCommand({
 			id: 'start-bulk-download',
 			name: 'Start bulk download from file',
 			callback: () => {

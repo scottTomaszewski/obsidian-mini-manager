@@ -98,6 +98,11 @@ export class DownloadManagerModal extends Modal {
                     const validationService = new ValidationService(this.app, this.plugin.settings);
                     const results = await validationService.validate();
                     new ValidationModal(this.app, this.plugin, results).open();
+                }))
+            .addButton(button => button
+                .setButtonText('Resume Downloads')
+                .onClick(() => {
+                    this.plugin.downloader.resumeDownloads();
                 }));
 
         this.jobsContainer = contentEl.createDiv('jobs-container');
