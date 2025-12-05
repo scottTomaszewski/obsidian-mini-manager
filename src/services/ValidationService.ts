@@ -169,7 +169,8 @@ export class ValidationService {
 							trimmedContent.startsWith('<!doctype html') ||
 							trimmedContent.startsWith('<html') ||
 							trimmedContent.startsWith('<head') ||
-							trimmedContent.startsWith('<body')
+							trimmedContent.startsWith('<body') ||
+							trimmedContent == ''
 						);
 					});
 					stream.on('error', (err) => {
@@ -189,7 +190,8 @@ export class ValidationService {
 				return trimmedContent.startsWith('<!doctype html') ||
 					trimmedContent.startsWith('<html') ||
 					trimmedContent.startsWith('<head') ||
-					trimmedContent.startsWith('<body');
+					trimmedContent.startsWith('<body') ||
+					trimmedContent == '';
 			}
 		} catch (error) {
 			this.app.console.error(`Error reading file for HTML check: ${filePath}`, error);
