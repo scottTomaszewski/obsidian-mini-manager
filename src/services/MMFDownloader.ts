@@ -776,7 +776,7 @@ export class MMFDownloader {
 
 					if (item.filename.toLowerCase().endsWith('.zip')) {
 						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						new Notice(`Extracting ${item.filename}...`);
+						// new Notice(`Extracting ${item.filename}...`);
 						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
 						try {
 							const zipData = await this.app.vault.adapter.readBinary(filePath);
@@ -802,7 +802,7 @@ export class MMFDownloader {
 	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
 		try {
 			const zip = await JSZip.loadAsync(zipData);
-			new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
+			// new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
 
 			for (const filename in zip.files) {
 				if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -826,7 +826,7 @@ export class MMFDownloader {
 					await this.app.vault.createBinary(filePath, content);
 				}
 			}
-			new Notice('Extraction complete.');
+			// new Notice('Extraction complete.');
 		} catch (error) {
 			if (error.name === 'AbortError') throw error;
 			new Notice(`Failed to extract zip file: ${error.message}`);
