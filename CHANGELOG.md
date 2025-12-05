@@ -1,5 +1,8 @@
 # Changelog
 
+- Checks for empty downloads
+- Less aggressive notifications
+
 ## 0.0.14
 
 - Fixing download issues

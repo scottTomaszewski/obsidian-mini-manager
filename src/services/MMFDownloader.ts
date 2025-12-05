@@ -317,11 +317,10 @@ export class MMFDownloader {
 				message += " with errors";
 				this.logger.warn(`Download completed with errors: ${errorMessages.join(', ')}`);
 				this.downloadManager.updateJob(job.id, 'failed', 100, "Completed with errors", errorMessages.join('\n'));
+				new Notice(message);
 			} else {
 				this.downloadManager.updateJob(job.id, 'completed', 100, "Completed");
 			}
-
-			new Notice(message);
 		} catch (error) {
 			if (error.name === 'AbortError') {
 				this.downloadManager.removeJob(objectId); // Remove the job if it was aborted
@@ -771,7 +770,7 @@ export class MMFDownloader {
 
 					const arrayBuffer = response.arrayBuffer;
 					await this.app.vault.createBinary(filePath, arrayBuffer);
-					new Notice(`Successfully downloaded ${item.filename}`);
+					// new Notice(`Successfully downloaded ${item.filename}`);
 
 					downloadedFiles++;
 
