@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.0.15
+
 - Checks for empty downloads
 - Less aggressive notifications
 
