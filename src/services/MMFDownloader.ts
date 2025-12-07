@@ -731,6 +731,12 @@ export class MMFDownloader {
 			// Only attempt direct download if the setting is enabled
 			if (this.settings.useDirectDownload) {
 				try {
+					// Limit file size to 1.5GB to avoid ArrayBuffer allocation errors.
+					const maxFileSize = 1.5 * 1024 * 1024 * 1024;
+					if (item.size && item.size > maxFileSize) {
+						throw new Error(`File is too large for direct download (${this.formatFileSize(item.size)}). Please download it manually.`);
+					}
+
 					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
 					const filePath = normalizePath(`${filesPath}/${item.filename}`);
 					if (await this.fileExists(filePath)) {

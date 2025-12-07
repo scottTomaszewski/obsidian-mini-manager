@@ -17,6 +17,10 @@
 
 - Attempts to fix arrayBuffer issue
 
+## unreleased
+
+- Avoids downloading any models over 1.5GB
+
 ## 0.0.11
 
 - Adds more info to buttons
