@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.16
+
+- Switches to a file-based approach for managing downloads
+
 ## 0.0.15
 
 - Checks for empty downloads
@@ -16,9 +20,6 @@
 ## 0.0.12
 
 - Attempts to fix arrayBuffer issue
-
-## unreleased
-
 - Avoids downloading any models over 1.5GB
 
 ## 0.0.11
