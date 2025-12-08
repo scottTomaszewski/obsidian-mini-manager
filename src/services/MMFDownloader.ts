@@ -57,13 +57,9 @@ export class MMFDownloader {
 	}
 
 	public async downloadObject(objectId: string): Promise<void> {
-		if (this.isPaused) {
-			new Notice('Downloads are paused. Please re-authenticate and resume.');
-			return;
-		}
 		const tempObject: MMFObject = {
 			id: objectId,
-			name: `Validating Object ${objectId}`,
+			name: `Object ${objectId}`,
 			description: '',
 			url: '',
 			images: [],
@@ -74,6 +70,10 @@ export class MMFDownloader {
 		};
 
 		const job = await this.downloadManager.addJob(tempObject);
+		if (this.isPaused) {
+			new Notice('Downloads are paused. Please re-authenticate and resume.');
+			return;
+		}
 		await this.downloadManager.updateJob(job.id, 'validating', 5, 'Validating...');
 		await this.fileStateService.add('validating', objectId);
 
