@@ -88,9 +88,9 @@ export class MMFDownloader {
 				await this.fileStateService.add('completed', objectId);
 			} else {
 				this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
-				await this.validationService.deleteObjectFolder(validationResult.folderPath);
-				await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
 				await this.fileStateService.add('queued', objectId);
+				await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
+				await this.validationService.deleteObjectFolder(validationResult.folderPath);
 				this._processQueue();
 			}
 		} else {
