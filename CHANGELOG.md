@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.19
+
+- Allows for resuming downloads
+
 ## 0.0.18
 
 - Fixes to state management

@@ -35,6 +35,8 @@ export class MMFDownloader {
 	}
 
 	public resumeDownloads(): void {
+		this.logger.info("resumeDownloads called.");
+		this.isProcessing = false; // Force reset the processing flag
 		if (this.isPaused) {
 			this.isPaused = false;
 			new Notice('Resuming downloads...');
@@ -148,26 +150,32 @@ export class MMFDownloader {
 	}
 
 	private async _processQueue(): Promise<void> {
+		this.logger.info(`_processQueue called. isPaused: ${this.isPaused}, isProcessing: ${this.isProcessing}`);
 		if (this.isPaused || this.isProcessing) {
 			return;
 		}
 		this.isProcessing = true;
+		this.logger.info(`_processQueue: set isProcessing to true.`);
 
 		try {
 			const activeDownloads = (await this.fileStateService.getAll('downloading')).length;
 			let availableSlots = this.settings.maxConcurrentDownloads - activeDownloads;
+			this.logger.info(`_processQueue: ${activeDownloads} active downloads, ${availableSlots} slots available.`);
 
 			while (availableSlots > 0) {
 				const objectId = await this.fileStateService.pop('queued');
 				if (!objectId) {
+					this.logger.info("_processQueue: Queue is empty.");
 					break; // Queue is empty
 				}
+				this.logger.info(`_processQueue: Popped ${objectId} from queue.`);
 				// Fire and forget
 				this._runDownload(objectId);
 				availableSlots--;
 			}
 		} finally {
 			this.isProcessing = false;
+			this.logger.info(`_processQueue: set isProcessing to false.`);
 		}
 	}
 
