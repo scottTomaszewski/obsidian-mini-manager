@@ -1,4 +1,4 @@
-import {Plugin, Notice} from 'obsidian';
+import {Plugin, Notice, normalizePath} from 'obsidian';
 import {
 	MiniManagerSettings,
 	DEFAULT_SETTINGS,
@@ -47,7 +47,8 @@ export default class MiniManagerPlugin extends Plugin {
 		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service, this.validationService);
 		this.searchService = new SearchService(this.app, this.settings);
 
-		// Add resume logic for interrupted downloads
+		// Add recovery and resume logic
+		await this.recoverOrphanedJobs();
 		await this.resumeInterruptedDownloads();
 
 		// Check if API key is set and show a notice if it's not
@@ -109,6 +110,37 @@ export default class MiniManagerPlugin extends Plugin {
 
 		// Start processing the queue automatically on load
 		this.downloader.resumeDownloads();
+	}
+
+	async recoverOrphanedJobs() {
+		this.logger.info("Checking for orphaned jobs...");
+		const jobAdapter = this.app.vault.adapter;
+		const jobsDir = normalizePath(`${this.app.vault.configDir}/plugins/mini-manager/jobs`);
+
+		if (!await jobAdapter.exists(jobsDir)) {
+			return;
+		}
+
+		const allJobFiles = await jobAdapter.list(jobsDir);
+		const allKnownStateIds = await this.fileStateService.getAllJobIds();
+		const knownIdSet = new Set(allKnownStateIds);
+
+		for (const jobFile of allJobFiles.files) {
+			const objectId = jobFile.split('/').pop()?.replace('.json', '');
+			if (objectId && !knownIdSet.has(objectId)) {
+				// This is an orphan
+				this.logger.warn(`Found orphaned job: ${objectId}. Re-queueing.`);
+				
+                const job = await this.downloadManager.getJob(objectId);
+                if (job && job.status !== 'completed' && job.status !== 'failed' && job.status !== 'cancelled') {
+				    await this.fileStateService.add('queued', objectId);
+                    await this.downloadManager.updateJob(objectId, 'queued', 0, 'Re-queued after crash');
+                } else if (!job) {
+                    // Job file exists but couldn't be loaded or is not in a terminal state.
+                    await this.fileStateService.add('queued', objectId);
+                }
+			}
+		}
 	}
 
 	async resumeInterruptedDownloads() {

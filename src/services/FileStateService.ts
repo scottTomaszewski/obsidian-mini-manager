@@ -130,13 +130,18 @@ export class FileStateService {
 		}
 	}
 
-	public async add(state: string, objectId: string): Promise<void> {
+	public async add(state: string, objectId: string | number): Promise<void> {
+		if (!objectId) return; // Do not add empty objectIds
 		await this.acquireLock(state);
 		try {
 			const ids = await this.getIds(state);
-			if (!ids.includes(objectId)) {
-				ids.push(objectId);
-				await this.writeIds(state, ids);
+			const idSet = new Set(ids);
+			
+			const originalSize = idSet.size;
+			idSet.add(String(objectId).trim());
+
+			if (idSet.size > originalSize) {
+				await this.writeIds(state, Array.from(idSet));
 			}
 		} finally {
 			await this.releaseLock(state);
@@ -157,29 +162,40 @@ export class FileStateService {
 		}
 	}
 
-	public async move(fromState: string, toState: string, objectId: string): Promise<void> {
+	public async move(fromState: string, toState: string, objectId: string | number): Promise<void> {
+		if (!objectId) return;
 		// Acquire locks in a consistent order to prevent deadlocks
 		const sortedStates = [fromState, toState].sort();
 		await this.acquireLock(sortedStates[0]);
-		await this.acquireLock(sortedStates[1]);
+		if (sortedStates[0] !== sortedStates[1]) {
+			await this.acquireLock(sortedStates[1]);
+		}
 
 		try {
 			// Remove from source
-			let fromIds = await this.getIds(fromState);
-			if (fromIds.includes(objectId)) {
-				fromIds = fromIds.filter(id => id !== objectId);
-				await this.writeIds(fromState, fromIds);
+			if (fromState !== toState) {
+				let fromIds = await this.getIds(fromState);
+				const objectIdStr = String(objectId);
+				if (fromIds.includes(objectIdStr)) {
+					fromIds = fromIds.filter(id => id !== objectIdStr);
+					await this.writeIds(fromState, fromIds);
+				}
 			}
 
 			// Add to destination
-			let toIds = await this.getIds(toState);
-			if (!toIds.includes(objectId)) {
-				toIds.push(objectId);
-				await this.writeIds(toState, toIds);
+			const toIds = await this.getIds(toState);
+			const toIdSet = new Set(toIds);
+			const originalSize = toIdSet.size;
+			toIdSet.add(String(objectId).trim());
+
+			if (toIdSet.size > originalSize) {
+				await this.writeIds(toState, Array.from(toIdSet));
 			}
 		} finally {
 			// Release locks in reverse order
-			await this.releaseLock(sortedStates[1]);
+			if (sortedStates[0] !== sortedStates[1]) {
+				await this.releaseLock(sortedStates[1]);
+			}
 			await this.releaseLock(sortedStates[0]);
 		}
 	}
