@@ -3,6 +3,7 @@ import { MMFObject} from "../models/MMFObject";
 import { requestUrl } from "obsidian";
 import { LoggerService } from "./LoggerService";
 import { OAuth2Service } from "./OAuth2Service";
+import { ApiError, AuthenticationError, HttpError } from "../models/Errors";
 
 export class MMFApiService {
     private apiBaseUrl = "https://www.myminifactory.com/api/v2";
@@ -66,31 +67,6 @@ export class MMFApiService {
                 let errorMessage = "";
                 let retryable = false;
                 
-                switch (response.status) {
-                    case 401:
-                        errorMessage = "Authentication failed: please check your API key or OAuth token";
-                        break;
-                    case 403:
-                        errorMessage = "Access forbidden: your API key or OAuth token may not have the required permissions";
-                        break;
-                    case 404:
-                        errorMessage = `Resource not found: ${endpoint}`;
-                        break;
-                    case 429:
-                        errorMessage = "Rate limit exceeded: too many requests";
-                        retryable = true;
-                        break;
-                    case 500:
-                    case 502:
-                    case 503:
-                    case 504:
-                        errorMessage = `Server error (${response.status}): the API service might be experiencing issues`;
-                        retryable = true;
-                        break;
-                    default:
-                        errorMessage = `API error: ${response.status}`;
-                }
-                
                 // Try to add more details from the response if available
                 try {
                     if (response.json && response.json.error) {
@@ -105,6 +81,31 @@ export class MMFApiService {
                 } catch (e) {
                     // If parsing fails, just use the status message
                 }
+
+                switch (response.status) {
+                    case 401:
+						errorMessage = "Authentication failed: please check your API key or OAuth token" + errorMessage;
+						throw new AuthenticationError(errorMessage);
+                    case 403:
+						errorMessage = "Access forbidden: your API key or OAuth token may not have the required permissions" + errorMessage;
+						throw new AuthenticationError(errorMessage);
+                    case 404:
+                        errorMessage = `Resource not found: ${endpoint}` + errorMessage;
+                        break;
+                    case 429:
+                        errorMessage = "Rate limit exceeded: too many requests" + errorMessage;
+                        retryable = true;
+                        break;
+                    case 500:
+                    case 502:
+                    case 503:
+                    case 504:
+                        errorMessage = `Server error (${response.status}): the API service might be experiencing issues` + errorMessage;
+                        retryable = true;
+                        break;
+                    default:
+                        errorMessage = `API error: ${response.status}` + errorMessage;
+                }
                 
                 // Retry logic for retryable errors
                 if (retryable && retries < this.maxRetries) {
@@ -115,11 +116,16 @@ export class MMFApiService {
                     return this.apiRequest(endpoint, method, retries + 1);
                 }
                 
-                throw new Error(errorMessage);
+                throw new HttpError(errorMessage, response.status);
             }
             
             return response.json;
         } catch (error) {
+			// If it's one of our custom errors, just re-throw it.
+			if (error instanceof ApiError) {
+				throw error;
+			}
+
             // For network errors or other issues, also implement retry logic
             if (retries < this.maxRetries && 
                 (error.message.includes('Failed to fetch') || 
@@ -136,7 +142,7 @@ export class MMFApiService {
             }
             
             this.logger.error(`API request failed after ${retries + 1} attempts: ${error.message}`);
-            throw new Error(`API request failed: ${error.message}`);
+            throw new ApiError(`API request failed: ${error.message}`);
         }
     }
     
@@ -182,24 +188,25 @@ export class MMFApiService {
     async getObjectById(objectId: string): Promise<MMFObject> {
         try {
             return await this.apiRequest(`/objects/${objectId}`);
-        		} catch (error) {
-        			this.logger.error(`Error getting object ${objectId}: ${error.message}`);
-        			if (error.message.includes("MyMiniFactory access token missing or expired")) {
-        				throw error;
-        			}
-        			
-        			// Create a fallback object with minimal information and web link
-        			const fallbackObject = this.createFallbackObject(objectId);
-        			
-        			// If we're instructed to throw, rethrow the error
-        			if (this.settings.strictApiMode) {
-        				throw new Error(`Failed to get object details: ${error.message}`);
-        			}
-        			
-        			// Otherwise, return the fallback object with a warning
-        			this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
-        			return fallbackObject;
-        		}    }
+        } catch (error) {
+			this.logger.error(`Error getting object ${objectId}: ${error.message}`);
+
+			// Always throw for authentication/authorization errors
+			if (error.message.includes("Authentication failed") || error.message.includes("Access forbidden")) {
+				throw error;
+			}
+			
+			// For other errors, respect strictApiMode
+			if (this.settings.strictApiMode) {
+				throw new Error(`Failed to get object details: ${error.message}`);
+			}
+			
+			// Otherwise, return a fallback object
+			const fallbackObject = this.createFallbackObject(objectId);
+			this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
+			return fallbackObject;
+        }
+    }
 
     /**
      * Check if the API key is valid by making a simple API request
