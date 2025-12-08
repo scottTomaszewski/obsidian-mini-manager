@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.17
+
+- Fixes to state management
+
 ## 0.0.16
 
 - Switches to a file-based approach for managing downloads
