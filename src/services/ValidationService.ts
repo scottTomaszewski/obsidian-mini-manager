@@ -1,6 +1,7 @@
 import { App, Platform } from 'obsidian';
 import { MiniManagerSettings } from '../settings/MiniManagerSettings';
 import { MMFObject } from '../models/MMFObject';
+import { FileStateService } from './FileStateService';
 
 export interface ValidationResult {
     object: MMFObject;
@@ -12,10 +13,12 @@ export interface ValidationResult {
 export class ValidationService {
     private app: App;
     private settings: MiniManagerSettings;
+	private fileStateService: FileStateService;
 
-    constructor(app: App, settings: MiniManagerSettings) {
+    constructor(app: App, settings: MiniManagerSettings, fileStateService: FileStateService) {
         this.app = app;
         this.settings = settings;
+		this.fileStateService = fileStateService;
     }
 
     public async validate(): Promise<ValidationResult[]> {
@@ -38,7 +41,11 @@ export class ValidationService {
                     const validationPromise = (async () => {
                         const metadataContent = await adapter.read(metadataPath);
                         const object = JSON.parse(metadataContent) as MMFObject;
-                        return this.validateObject(object, objectFolder);
+                        const result = await this.validateObject(object, objectFolder);
+						if (result.isValid) {
+							await this.fileStateService.add('completed', object.id);
+						}
+						return result;
                     })();
                     validationPromises.push(validationPromise);
                 }

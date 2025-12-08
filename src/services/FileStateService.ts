@@ -59,23 +59,33 @@ export class FileStateService {
 	}
 
 	private async acquireLock(state: string): Promise<void> {
-		const lockFile = this.getLockFilePath(state);
+		const lockDir = this.getLockFilePath(state);
 		const startTime = Date.now();
 
-		while (await this.app.vault.adapter.exists(lockFile)) {
-			if (Date.now() - startTime > this.lockTimeout) {
-				this.logger.error(`Could not acquire lock for state '${state}' within ${this.lockTimeout}ms. Lock file: ${lockFile}`);
-				throw new Error(`Could not acquire lock for state '${state}'.`);
+		while (true) {
+			try {
+				await this.app.vault.adapter.mkdir(lockDir);
+				break; // Lock acquired
+			} catch (e) {
+				if (Date.now() - startTime > this.lockTimeout) {
+					this.logger.error(`Could not acquire lock for state '${state}' within ${this.lockTimeout}ms. Lock file: ${lockDir}`);
+					throw new Error(`Could not acquire lock for state '${state}'.`);
+				}
+				await new Promise(resolve => setTimeout(resolve, this.retryDelay));
 			}
-			await new Promise(resolve => setTimeout(resolve, this.retryDelay));
 		}
-		await this.app.vault.adapter.write(lockFile, String(Date.now()));
 	}
 
 	private async releaseLock(state: string): Promise<void> {
-		const lockFile = this.getLockFilePath(state);
-		if (await this.app.vault.adapter.exists(lockFile)) {
-			await this.app.vault.adapter.remove(lockFile);
+		const lockDir = this.getLockFilePath(state);
+		try {
+			// The true flag means recursive, which will delete the directory even if it's not empty.
+			await this.app.vault.adapter.rmdir(lockDir, true);
+		} catch (e) {
+			// Ignore errors, such as if the directory doesn't exist.
+			if (!e.message.contains("no such file or directory")) {
+				this.logger.warn(`Unexpected error releasing lock for state '${state}': ${e.message}`);
+			}
 		}
 	}
 

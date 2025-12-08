@@ -14,6 +14,7 @@ import { OAuth2Service } from '../services/OAuth2Service';
 import {ValidationService} from "../services/ValidationService";
 import { FileStateService } from '../services/FileStateService';
 import { DownloadManager } from '../services/DownloadManager';
+import { ValidationModal } from '../ui/ValidationModal';
 
 export default class MiniManagerPlugin extends Plugin {
 	settings: MiniManagerSettings;
@@ -24,6 +25,7 @@ export default class MiniManagerPlugin extends Plugin {
 	oauth2Service: OAuth2Service;
 	fileStateService: FileStateService;
 	downloadManager: DownloadManager;
+	validationService: ValidationService;
 
 	async onload() {
 		console.log('Loading Mini Manager plugin');
@@ -31,18 +33,18 @@ export default class MiniManagerPlugin extends Plugin {
 		// Initialize services
 		this.logger = LoggerService.getInstance(this.app);
 		await this.loadSettings();
-
-		// Initialize services that depend on settings
-		this.oauth2Service = new OAuth2Service(this.settings, this.logger);
-		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
-		const validationService = new ValidationService(this.app, this.settings);
-
+		
 		// Initialize state and download management services
 		this.fileStateService = FileStateService.getInstance(this.app, this.logger);
 		await this.fileStateService.init();
 		this.downloadManager = DownloadManager.getInstance(this.fileStateService);
 
-		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service, validationService);
+		// Initialize services that depend on settings
+		this.oauth2Service = new OAuth2Service(this.settings, this.logger);
+		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
+		this.validationService = new ValidationService(this.app, this.settings, this.fileStateService);
+
+		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service, this.validationService);
 		this.searchService = new SearchService(this.app, this.settings);
 
 		// Add resume logic for interrupted downloads
@@ -83,6 +85,17 @@ export default class MiniManagerPlugin extends Plugin {
 			name: 'Start bulk download from file',
 			callback: () => {
 				this.downloader.startBulkDownload();
+			}
+		});
+
+		this.addCommand({
+			id: 'validate-all-models',
+			name: 'Validate all downloaded models',
+			callback: async () => {
+				new Notice('Starting validation...');
+				const results = await this.validationService.validate();
+				new ValidationModal(this.app, this, results).open();
+				new Notice(`Validation complete. Found ${results.filter(r => !r.isValid).length} issues.`);
 			}
 		});
 

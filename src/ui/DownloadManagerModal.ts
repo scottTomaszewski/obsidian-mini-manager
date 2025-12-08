@@ -94,10 +94,9 @@ export class DownloadManagerModal extends Modal {
                 .setButtonText('Validate Downloads')
                 .onClick(async () => {
                     new Notice('Validation process started...');
-                    // Ensure plugin.settings is passed, as ValidationService needs access to downloadPath etc.
-                    const validationService = new ValidationService(this.app, this.plugin.settings);
-                    const results = await validationService.validate();
+                    const results = await this.plugin.validationService.validate();
                     new ValidationModal(this.app, this.plugin, results).open();
+					new Notice(`Validation complete. Found ${results.filter(r => !r.isValid).length} issues.`);
                 }))
             .addButton(button => button
                 .setButtonText('Resume Downloads')
