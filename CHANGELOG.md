@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.0.19
+## 0.0.20
 
-- Allows for resuming downloads
+- Allows for resuming downloads regardless of state
 
 ## 0.0.18
 

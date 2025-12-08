@@ -39,11 +39,11 @@ export class MMFDownloader {
 		this.isProcessing = false; // Force reset the processing flag
 		if (this.isPaused) {
 			this.isPaused = false;
-			new Notice('Resuming downloads...');
-			this._processQueue();
+			new Notice('Resuming paused downloads...');
 		} else {
-			new Notice('Downloads are not paused.');
+			new Notice('Processing queued models...');
 		}
+		this._processQueue();
 	}
 
 	private handleAuthError(): void {
