@@ -96,6 +96,9 @@ export class DownloadManager {
 	}
 
 	public async removeJob(id: string) {
+		// Just in case, make sure we dont lose it
+		await this.fileStateService.add('all', id);
+
 		if (this.jobs.has(id)) {
 			this.jobs.delete(id);
 		}
