@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.21
+
+- Aa bit more stability to avoid data loss
+
 ## 0.0.20
 
 - Allows for resuming downloads regardless of state
