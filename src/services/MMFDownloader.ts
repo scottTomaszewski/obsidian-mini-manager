@@ -57,6 +57,8 @@ export class MMFDownloader {
 	}
 
 	public async downloadObject(objectId: string): Promise<void> {
+		await this.fileStateService.add('all', objectId);
+
 		const tempObject: MMFObject = {
 			id: objectId,
 			name: `Object ${objectId}`,

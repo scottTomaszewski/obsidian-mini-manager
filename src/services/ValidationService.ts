@@ -42,6 +42,7 @@ export class ValidationService {
                         const metadataContent = await adapter.read(metadataPath);
                         const object = JSON.parse(metadataContent) as MMFObject;
                         const result = await this.validateObject(object, objectFolder);
+						await this.fileStateService.add('all', object.id);
 						if (result.isValid) {
 							await this.fileStateService.add('completed', object.id);
 						}
