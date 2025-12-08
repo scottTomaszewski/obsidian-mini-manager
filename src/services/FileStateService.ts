@@ -148,12 +148,14 @@ export class FileStateService {
 		}
 	}
 
-	public async remove(state: string, objectId: string): Promise<void> {
+	public async remove(state: string, objectId: string | number): Promise<void> {
+		if (!objectId) return;
 		await this.acquireLock(state);
 		try {
 			let ids = await this.getIds(state);
 			const initialLength = ids.length;
-			ids = ids.filter(id => id !== objectId);
+			const objectIdStr = String(objectId).trim();
+			ids = ids.filter(id => id !== objectIdStr);
 			if (ids.length < initialLength) {
 				await this.writeIds(state, ids);
 			}
