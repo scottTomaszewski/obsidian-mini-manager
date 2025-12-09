@@ -22,6 +22,7 @@ export class MMFDownloader {
 	private cancellationTokens: Map<string, AbortController> = new Map(); // For actual request cancellation
 	private isPaused: boolean = false;
 	private isProcessing: boolean = false;
+	private isFileDownloadsPaused: boolean = false;
 
 	constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service, validationService: ValidationService) {
 		this.app = app;
@@ -43,6 +44,7 @@ export class MMFDownloader {
 		} else {
 			new Notice('Processing 00_queued models...');
 		}
+		this.isFileDownloadsPaused = false;
 		this._processQueue();
 	}
 
@@ -56,6 +58,13 @@ export class MMFDownloader {
 
 	public isPausedState(): boolean {
 		return this.isPaused;
+	}
+
+	private pauseFileDownloads(message?: string) {
+		this.isFileDownloadsPaused = true;
+		const noticeMsg = message || 'File downloads paused after server error. Resume when ready.';
+		new Notice(noticeMsg);
+		this.logger.warn(noticeMsg);
 	}
 
 	private handleAuthError(): void {
@@ -157,6 +166,10 @@ export class MMFDownloader {
 			// --- Heavy Task Pool (File Downloads) ---
 			const activeFileDownloads = (await this.fileStateService.getAll('70_downloading')).length;
 			let availableFileSlots = this.settings.maxConcurrentDownloads - activeFileDownloads;
+			if (this.isFileDownloadsPaused) {
+				availableFileSlots = 0;
+				this.logger.info("File downloads paused; skipping heavy task dispatch.");
+			}
 			if (availableFileSlots > 0) {
 				const readyForFiles = await this.fileStateService.getAll('60_images_downloaded');
 				if (readyForFiles.length > 0) {
@@ -774,6 +787,11 @@ export class MMFDownloader {
 						headers: headers,
 						signal: signal // Pass signal here
 					});
+
+					if (response.status === 403) {
+						this.pauseFileDownloads('Received 403 while downloading files. File downloads paused; resume after resolving authentication.');
+						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status);
+					}
 
 					if (response.status !== 200) {
 						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
