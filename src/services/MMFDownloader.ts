@@ -121,9 +121,11 @@ export class MMFDownloader {
 		}
 
 		// Move to a 'cancelled' state from any of the active states
-		for (const state of ['00_queued', '10_validating', '30_preparing', '50_downloading_images', '70_downloading']) {
-			await this.fileStateService.move(state, 'cancelled', objectId);
-		}
+		await this.fileStateService.moveAcrossStates(
+			['00_queued', '10_validating', '30_preparing', '50_downloading_images', '70_downloading'],
+			'cancelled',
+			objectId
+		);
 
 		this.downloadManager.removeJob(objectId);
 		new Notice(`Download for ${objectId} cancelled.`);
@@ -402,7 +404,7 @@ export class MMFDownloader {
 		instructionsContent += `1. Visit the object page on MyMiniFactory: [${object.name || `Object ${objectId}`}](${webUrl})\n`;
 		instructionsContent += `2. Log in to your MyMiniFactory account\n`;
 		instructionsContent += `3. Use the download button on the website\n`;
-		content += `4. Place them in the files subfolder of this directory\n`;
+		instructionsContent += `4. Place them in the files subfolder of this directory\n`;
 
 		instructionsContent += `## Technical Details\n\n`;
 		instructionsContent += `Error: ${error.message}\n\n`;

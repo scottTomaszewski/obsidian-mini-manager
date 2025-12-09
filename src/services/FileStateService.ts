@@ -218,6 +218,16 @@ export class FileStateService {
 		}
 	}
 
+	/**
+	 * Convenience helper: try moving an objectId from each of the provided states into the target.
+	 * If the id is not present in a given state, the move call becomes a no-op.
+	 */
+	public async moveAcrossStates(fromStates: string[], toState: string, objectId: string | number): Promise<void> {
+		for (const state of fromStates) {
+			await this.move(state, toState, objectId);
+		}
+	}
+
 	public async getAll(state: string): Promise<string[]> {
 		// This read can be dirty, but for safety, we lock.
 		await this.acquireLock(state);
@@ -290,4 +300,3 @@ export class FileStateService {
 		}
 	}
 }
-

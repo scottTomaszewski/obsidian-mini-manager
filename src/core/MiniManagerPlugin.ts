@@ -145,7 +145,17 @@ export default class MiniManagerPlugin extends Plugin {
 
 	async resumeInterruptedDownloads() {
 		this.logger.info("Checking for interrupted downloads...");
-		const transientStates = ['downloading', 'validating', 'extracting'];
+		// Include all non-terminal states so we re-queue anything that was mid-flight
+		const transientStates = [
+			'10_validating',
+			'20_validated',
+			'30_preparing',
+			'40_prepared',
+			'50_downloading_images',
+			'60_images_downloaded',
+			'70_downloading'
+		];
+
 		for (const state of transientStates) {
 			const ids = await this.fileStateService.getAll(state);
 			for (const id of ids) {
