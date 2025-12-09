@@ -13,6 +13,7 @@ export class DownloadManagerModal extends Modal {
     private objectId: string = "";
     private clearCompletedButton?: HTMLButtonElement;
     private clearFailedButton?: HTMLButtonElement;
+    private downloadButton?: HTMLButtonElement;
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
@@ -62,8 +63,10 @@ export class DownloadManagerModal extends Modal {
                     this.objectId = value;
                 }))
             .addButton(button => button
+                .setCta()
                 .setButtonText('Download')
                 .onClick(() => {
+                    this.downloadButton = button.buttonEl;
                     if (!this.objectId) {
                         new Notice('Please enter one or more object IDs');
                         return;
@@ -209,23 +212,44 @@ export class DownloadManagerModal extends Modal {
                 },
             });
 
+            this.applyProgressStyle(progressBar, job.status);
+
             if (job.status === 'failed') {
-                progressBar.addClass('error');
                 const retryButton = detailsEl.createEl('button', { text: 'Retry' });
                 retryButton.addEventListener('click', () => {
                     this.retryDownload(job.id);
                 });
-            } else if (job.status === 'completed') {
+            } else if (job.status === '80_completed') {
                 const clearButton = detailsEl.createEl('button', { text: 'Clear' });
                 clearButton.addEventListener('click', () => {
                     this.downloadManager.removeJob(job.id);
                 });
-            } else if (['pending', 'downloading', 'extracting', 'preparing', 'downloading_images'].includes(job.status)) {
+            } else if (['pending', '70_downloading', '30_preparing', '50_downloading_images', '10_validating', '20_validated', '40_prepared', '60_images_downloaded', '00_queued'].includes(job.status)) {
                 const cancelButton = detailsEl.createEl('button', { text: 'Cancel' });
                 cancelButton.addEventListener('click', () => {
                     this.plugin.downloader.cancelDownload(job.id);
                 });
             }
+        }
+    }
+
+    private applyProgressStyle(progressEl: HTMLProgressElement, status: DownloadJob['status']) {
+        progressEl.className = ''; // reset
+        const paused = this.plugin.downloader.isPausedState();
+
+        if (paused || status === 'cancelled') {
+            progressEl.classList.add('paused');
+            return;
+        }
+
+        if (status === 'failed') {
+            progressEl.classList.add('error');
+        } else if (status === '80_completed') {
+            progressEl.classList.add('complete');
+        } else if (status === '00_queued' || status === 'pending') {
+            progressEl.classList.add('queued');
+        } else {
+            progressEl.classList.add('processing');
         }
     }
 }

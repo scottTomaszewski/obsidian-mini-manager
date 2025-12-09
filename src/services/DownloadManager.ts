@@ -116,14 +116,14 @@ export class DownloadManager {
 
 	public async clearCompleted() {
 		for (const job of this.jobs.values()) {
-			if (job.status === 'completed') {
+			if (job.status === '80_completed') {
 				await this.removeJob(job.id);
 			}
 		}
 	}
 
 	public getCompletedJobsCount(): number {
-		return this.getJobs().filter(job => job.status === 'completed').length;
+		return this.getJobs().filter(job => job.status === '80_completed').length;
 	}
 
 	public getFailedJobsCount(): number {

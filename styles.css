@@ -28,14 +28,52 @@
   margin-left: 10px;
 }
 
-progress.error::-webkit-progress-bar {
-    background-color: var(--background-primary);
+/* Progress bar styling */
+progress {
+  -webkit-appearance: none;
+  appearance: none;
 }
-progress.error::-webkit-progress-value {
-    background-color: var(--text-error);
+
+progress::-webkit-progress-bar {
+  background-color: var(--background-secondary);
+  border-radius: 4px;
 }
+progress::-webkit-progress-value {
+  background-color: var(--text-muted);
+  border-radius: 4px;
+}
+progress::-moz-progress-bar {
+  background-color: var(--text-muted);
+  border-radius: 4px;
+}
+
+progress.error::-webkit-progress-bar,
 progress.error::-moz-progress-bar {
-    background-color: var(--text-error);
+  background-color: var(--background-secondary);
+}
+progress.error::-webkit-progress-value,
+progress.error::-moz-progress-bar {
+  background-color: var(--text-error);
+}
+
+progress.queued::-webkit-progress-value,
+progress.queued::-moz-progress-bar {
+  background-color: var(--text-muted) !important;
+}
+
+progress.processing::-webkit-progress-value,
+progress.processing::-moz-progress-bar {
+  background-color: var(--interactive-accent) !important;
+}
+
+progress.complete::-webkit-progress-value,
+progress.complete::-moz-progress-bar {
+  background-color: var(--text-success) !important;
+}
+
+progress.paused::-webkit-progress-value,
+progress.paused::-moz-progress-bar {
+  background-color: var(--text-warning) !important;
 }
 
 /* Custom styles for wider modals */

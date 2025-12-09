@@ -54,6 +54,10 @@ export class MMFDownloader {
 		}
 	}
 
+	public isPausedState(): boolean {
+		return this.isPaused;
+	}
+
 	private handleAuthError(): void {
 		this.isPaused = true;
 		const notice = new Notice('MyMiniFactory authentication expired. Please re-authenticate in the settings.', 0);
