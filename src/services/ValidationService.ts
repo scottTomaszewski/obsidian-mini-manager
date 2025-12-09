@@ -76,6 +76,7 @@ export class ValidationService {
     private async findObjectFolder(objectId: string): Promise<string | null> {
         const downloadPath = this.settings.downloadPath;
         const adapter = this.app.vault.adapter;
+        const targetId = String(objectId);
 
         if (!await adapter.exists(downloadPath)) {
             return null;
@@ -91,7 +92,15 @@ export class ValidationService {
                 if (await adapter.exists(metadataPath)) {
                     const metadataContent = await adapter.read(metadataPath);
                     const object = JSON.parse(metadataContent) as MMFObject;
-                    if (object.id === objectId) {
+                    const metadataId = object?.id !== undefined ? String(object.id) : null;
+                    const isPlaceholder =
+                        typeof object?.name === 'string' &&
+                        object.name.trim().toLowerCase().startsWith('object ') &&
+                        !object.url &&
+                        (!(object.files && 'items' in object.files) || (object.files.items?.length ?? 0) === 0) &&
+                        ((object.images?.length ?? 0) === 0);
+
+                    if (metadataId === targetId && !isPlaceholder) {
                         return objectFolder;
                     }
                 }

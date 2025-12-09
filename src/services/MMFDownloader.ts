@@ -278,7 +278,9 @@ export class MMFDownloader {
 			}
 			
 			await this.downloadManager.updateJob(objectId, '30_preparing', 20, "Creating folders...");
-			await this.createObjectFolder(object);
+			const objectFolder = await this.createObjectFolder(object);
+			// Persist real metadata early so later steps (and retries) know the correct folder/name
+			await this.saveMetadataFile(object, objectFolder);
 			if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
 			
 			// now ready for image download
