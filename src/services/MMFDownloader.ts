@@ -46,6 +46,14 @@ export class MMFDownloader {
 		this._processQueue();
 	}
 
+	public pauseDownloads(): void {
+		this.logger.info("pauseDownloads called.");
+		if (!this.isPaused) {
+			this.isPaused = true;
+			new Notice('Downloads paused. You can resume anytime.');
+		}
+	}
+
 	private handleAuthError(): void {
 		this.isPaused = true;
 		const notice = new Notice('MyMiniFactory authentication expired. Please re-authenticate in the settings.', 0);

@@ -99,6 +99,11 @@ export class DownloadManagerModal extends Modal {
 					new Notice(`Validation complete. Found ${results.filter(r => !r.isValid).length} issues.`);
                 }))
             .addButton(button => button
+                .setButtonText('Pause Downloads')
+                .onClick(() => {
+                    this.plugin.downloader.pauseDownloads();
+                }))
+            .addButton(button => button
                 .setButtonText('Resume Downloads')
                 .onClick(() => {
                     this.plugin.downloader.resumeDownloads();

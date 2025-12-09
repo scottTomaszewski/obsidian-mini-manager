@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.22
+
+- Bunch of fixes to the handling of the lifecycle of a model
+
 ## 0.0.21
 
 - Aa bit more stability to avoid data loss
