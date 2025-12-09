@@ -222,8 +222,7 @@ export class MMFDownloader {
 			}
 		}
 	}
-	
-	
+
 	private async _runValidation(objectId: string): Promise<void> {
 		const abortController = new AbortController();
 		this.cancellationTokens.set(objectId, abortController);
@@ -241,11 +240,11 @@ export class MMFDownloader {
 					this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
 					await this.validationService.deleteObjectFolder(validationResult.folderPath);
 					await this.fileStateService.move('10_validating', '20_validated', objectId); // Ready for prep
-					this.logger.info(`(model ${objectId}) State updated to 'validated'`);
+					this.logger.info(`(model ${objectId}) State updated to 'validated' (but failed validation)`);
 				}
 			} else {
 				await this.fileStateService.move('10_validating', '20_validated', objectId); // Ready for prep
-				this.logger.info(`(model ${objectId}) State updated to 'validated'`);
+				this.logger.info(`(model ${objectId}) State updated to 'validated' (but failed validation)`);
 			}
 		} catch (error) {
 			await this._runErrorHandler(objectId, error, '10_validating');
