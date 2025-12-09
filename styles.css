@@ -13,6 +13,7 @@
   display: flex;
   width: 100%;
   align-items: center;
+  gap: 10px;
 }
 
 .download-job-details .setting-item-description {
@@ -26,6 +27,12 @@
 
 .download-job-details button {
   margin-left: 10px;
+}
+
+.download-job-action {
+  min-width: 90px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Custom styles for wider modals */

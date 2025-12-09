@@ -214,18 +214,20 @@ export class DownloadManagerModal extends Modal {
 
             this.applyProgressStyle(progressBar, job.status);
 
+            const actionEl = detailsEl.createDiv('download-job-action');
+
             if (job.status === 'failed') {
-                const retryButton = detailsEl.createEl('button', { text: 'Retry' });
+                const retryButton = actionEl.createEl('button', { text: 'Retry' });
                 retryButton.addEventListener('click', () => {
                     this.retryDownload(job.id);
                 });
             } else if (job.status === '80_completed') {
-                const clearButton = detailsEl.createEl('button', { text: 'Clear' });
+                const clearButton = actionEl.createEl('button', { text: 'Clear' });
                 clearButton.addEventListener('click', () => {
                     this.downloadManager.removeJob(job.id);
                 });
             } else if (['pending', '70_downloading', '30_preparing', '50_downloading_images', '10_validating', '20_validated', '40_prepared', '60_images_downloaded', '00_queued'].includes(job.status)) {
-                const cancelButton = detailsEl.createEl('button', { text: 'Cancel' });
+                const cancelButton = actionEl.createEl('button', { text: 'Cancel' });
                 cancelButton.addEventListener('click', () => {
                     this.plugin.downloader.cancelDownload(job.id);
                 });
