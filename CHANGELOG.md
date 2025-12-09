@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.23
+
+- Hitting "resume downloads" will check queue for newly added model ids
+
 ## 0.0.22
 
 - Bunch of fixes to the handling of the lifecycle of a model

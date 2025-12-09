@@ -45,7 +45,8 @@ export class MMFDownloader {
 			new Notice('Processing 00_queued models...');
 		}
 		this.isFileDownloadsPaused = false;
-		this._processQueue();
+		// Ensure any ids present in 00_queued.txt are loaded into jobs map
+		this.syncQueuedJobsFromState().finally(() => this._processQueue());
 	}
 
 	public pauseDownloads(): void {
@@ -65,6 +66,28 @@ export class MMFDownloader {
 		const noticeMsg = message || 'File downloads paused after server error. Resume when ready.';
 		new Notice(noticeMsg);
 		this.logger.warn(noticeMsg);
+	}
+
+	private async syncQueuedJobsFromState(): Promise<void> {
+		try {
+			const queuedIds = await this.fileStateService.getAll('00_queued');
+			for (const id of queuedIds) {
+				if (!this.downloadManager.getJob(id)) {
+					const placeholder: MMFObject = {
+						id,
+						name: `Object ${id}`,
+						description: '',
+						url: '',
+						images: [],
+						files: { total_count: 0, items: [] }
+					};
+					await this.downloadManager.addJob(placeholder);
+					await this.downloadManager.updateJob(id, '00_queued', 0, 'In queue...');
+				}
+			}
+		} catch (e) {
+			this.logger.error(`Failed to sync queued jobs from state: ${e.message}`);
+		}
 	}
 
 	private handleAuthError(): void {
