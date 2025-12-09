@@ -44,7 +44,7 @@ export class ValidationService {
                         const result = await this.validateObject(object, objectFolder);
 						await this.fileStateService.add('all', object.id);
 						if (result.isValid) {
-							await this.fileStateService.add('completed', object.id);
+							await this.fileStateService.add('80_completed', object.id);
 						}
 						return result;
                     })();

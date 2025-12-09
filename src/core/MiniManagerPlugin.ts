@@ -132,12 +132,12 @@ export default class MiniManagerPlugin extends Plugin {
 				this.logger.warn(`Found orphaned job: ${objectId}. Re-queueing.`);
 				
                 const job = await this.downloadManager.getJob(objectId);
-                if (job && job.status !== 'completed' && job.status !== 'failed' && job.status !== 'cancelled') {
-				    await this.fileStateService.add('queued', objectId);
-                    await this.downloadManager.updateJob(objectId, 'queued', 0, 'Re-queued after crash');
+                if (job && job.status !== '80_completed' && job.status !== 'failed' && job.status !== 'cancelled') {
+				    await this.fileStateService.add('00_queued', objectId);
+                    await this.downloadManager.updateJob(objectId, '00_queued', 0, 'Re-queued after crash');
                 } else if (!job) {
                     // Job file exists but couldn't be loaded or is not in a terminal state.
-                    await this.fileStateService.add('queued', objectId);
+                    await this.fileStateService.add('00_queued', objectId);
                 }
 			}
 		}
@@ -150,10 +150,10 @@ export default class MiniManagerPlugin extends Plugin {
 			const ids = await this.fileStateService.getAll(state);
 			for (const id of ids) {
 				this.logger.info(`Download for ${id} was interrupted in ${state} state. Re-queueing.`);
-				await this.fileStateService.move(state, 'queued', id);
+				await this.fileStateService.move(state, '00_queued', id);
 				const job = await this.downloadManager.getJob(id);
 				if (job) {
-					await this.downloadManager.updateJob(id, 'queued', 0, 'Re-queued after interruption');
+					await this.downloadManager.updateJob(id, '00_queued', 0, 'Re-queued after interruption');
 				}
 			}
 		}
