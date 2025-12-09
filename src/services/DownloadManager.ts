@@ -4,7 +4,7 @@ import { FileStateService } from './FileStateService';
 export interface DownloadJob {
 	id: string;
 	object: MMFObject;
-	status: 'pending' | 'downloading' | 'extracting' | 'completed' | 'failed' | 'validating' | 'cancelled' | 'queued';
+	status: 'pending' | 'downloading' | 'extracting' | 'completed' | 'failed' | 'validating' | 'cancelled' | 'queued' | 'preparing' | 'downloading_images';
 	progress: number; // 0-100
 	progressMessage: string;
 	error?: string;

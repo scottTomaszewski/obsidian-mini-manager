@@ -214,7 +214,7 @@ export class DownloadManagerModal extends Modal {
                 clearButton.addEventListener('click', () => {
                     this.downloadManager.removeJob(job.id);
                 });
-            } else if (['pending', 'downloading', 'extracting'].includes(job.status)) {
+            } else if (['pending', 'downloading', 'extracting', 'preparing', 'downloading_images'].includes(job.status)) {
                 const cancelButton = detailsEl.createEl('button', { text: 'Cancel' });
                 cancelButton.addEventListener('click', () => {
                     this.plugin.downloader.cancelDownload(job.id);

@@ -76,30 +76,10 @@ export class MMFDownloader {
 			new Notice('Downloads are paused. Please re-authenticate and resume.');
 			return;
 		}
-		await this.downloadManager.updateJob(job.id, 'validating', 5, 'Validating...');
-		await this.fileStateService.add('validating', objectId);
 
-		const validationResult = await this.validationService.validateAndGetResult(objectId);
-
-		await this.fileStateService.remove('validating', objectId);
-
-		if (validationResult) {
-			if (validationResult.isValid) {
-				await this.downloadManager.updateJob(job.id, 'completed', 100, 'Model already downloaded and valid');
-				new Notice(`Model ${validationResult.object.name} already downloaded and valid.`);
-				await this.fileStateService.add('completed', objectId);
-			} else {
-				this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
-				await this.fileStateService.add('queued', objectId);
-				await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
-				await this.validationService.deleteObjectFolder(validationResult.folderPath);
-				this._processQueue();
-			}
-		} else {
-			await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
-			await this.fileStateService.add('queued', objectId);
-			this._processQueue();
-		}
+		await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
+		await this.fileStateService.add('queued', objectId);
+		this._processQueue();
 	}
 
 	public async startBulkDownload(): Promise<void> {
@@ -140,10 +120,10 @@ export class MMFDownloader {
 			abortController.abort();
 		}
 
-		// Move to a 'cancelled' state
-		await this.fileStateService.remove('queued', objectId);
-		await this.fileStateService.move('downloading', 'cancelled', objectId);
-		await this.fileStateService.remove('validating', objectId);
+		// Move to a 'cancelled' state from any of the active states
+		for (const state of ['queued', 'validating', 'preparing', 'downloading_images', 'downloading']) {
+			await this.fileStateService.move(state, 'cancelled', objectId);
+		}
 
 		this.downloadManager.removeJob(objectId);
 		new Notice(`Download for ${objectId} cancelled.`);
@@ -160,20 +140,55 @@ export class MMFDownloader {
 		this.logger.info(`_processQueue: set isProcessing to true.`);
 
 		try {
-			const activeDownloads = (await this.fileStateService.getAll('downloading')).length;
-			let availableSlots = this.settings.maxConcurrentDownloads - activeDownloads;
-			this.logger.info(`_processQueue: ${activeDownloads} active downloads, ${availableSlots} slots available.`);
-
-			while (availableSlots > 0) {
-				const objectId = await this.fileStateService.pop('queued');
-				if (!objectId) {
-					this.logger.info("_processQueue: Queue is empty.");
-					break; // Queue is empty
+			// --- Heavy Task Pool (File Downloads) ---
+			const activeFileDownloads = (await this.fileStateService.getAll('downloading')).length;
+			let availableFileSlots = this.settings.maxConcurrentDownloads - activeFileDownloads;
+			if (availableFileSlots > 0) {
+				const readyForFiles = await this.fileStateService.getAll('images_downloaded');
+				if (readyForFiles.length > 0) {
+					const objectId = readyForFiles[0];
+					await this.fileStateService.move('images_downloaded', 'downloading', objectId);
+					this._runFileDownload(objectId); // fire and forget
+					availableFileSlots--; 
 				}
-				this.logger.info(`_processQueue: Popped ${objectId} from queue.`);
-				// Fire and forget
-				this._runDownload(objectId);
-				availableSlots--;
+			}
+
+			// --- Light Task Pool (Validation, Prep, Images) ---
+			const activeLightTasks = (await this.fileStateService.getAll('validating')).length +
+									(await this.fileStateService.getAll('preparing')).length +
+									(await this.fileStateService.getAll('downloading_images')).length;
+			let availableLightSlots = this.settings.maxConcurrentLightTasks - activeLightTasks;
+
+			while (availableLightSlots > 0) {
+				// Prioritize tasks further down the pipeline
+				const readyForImages = await this.fileStateService.getAll('prepared');
+				if (readyForImages.length > 0) {
+					const objectId = readyForImages[0];
+					await this.fileStateService.move('prepared', 'downloading_images', objectId);
+					this._runImageDownload(objectId);
+					availableLightSlots--;
+					continue;
+				}
+
+				const readyForPrep = await this.fileStateService.getAll('validated');
+				if (readyForPrep.length > 0) {
+					const objectId = readyForPrep[0];
+					await this.fileStateService.move('validated', 'preparing', objectId);
+					this._runPreparation(objectId);
+					availableLightSlots--;
+					continue;
+				}
+
+				const queued = await this.fileStateService.getAll('queued');
+				if (queued.length > 0) {
+					const objectId = queued[0];
+					await this.fileStateService.move('queued', 'validating', objectId);
+					this._runValidation(objectId);
+					availableLightSlots--;
+					continue;
+				}
+				
+				break; // No more light tasks to start
 			}
 		} finally {
 			this.isProcessing = false;
@@ -181,134 +196,176 @@ export class MMFDownloader {
 		}
 	}
 
-	private async _runDownload(objectId: string): Promise<void> {
+	private async _runErrorHandler(objectId: string, error: Error, fromState: string) {
+		if (error.name === 'AbortError') {
+			this.logger.info(`Download for object ${objectId} was aborted.`);
+			// cancelDownload handles moving to 'cancelled' state.
+		} else {
+			this.logger.error(`Failed to download object ${objectId}: ${error.message}`);
+			
+			let failureState = 'failure_unknown';
+			if (error instanceof AuthenticationError) {
+				failureState = 'failure_auth';
+				this.handleAuthError();
+			} else if (error instanceof HttpError) {
+				failureState = `failure_code_${error.status}`;
+			}
+	
+			if (failureState === 'failure_unknown') {
+				await this.fileStateService.addUnknownFailure(objectId, error);
+			} else {
+				await this.fileStateService.move(fromState, failureState, objectId);
+			}
+	
+			if (await this.downloadManager.getJob(objectId)) {
+				await this.downloadManager.updateJob(objectId, 'failed', 100, "Failed", error.message);
+			}
+		}
+	}
+	
+	
+	private async _runValidation(objectId: string): Promise<void> {
 		const abortController = new AbortController();
 		this.cancellationTokens.set(objectId, abortController);
-
 		try {
-			await this.fileStateService.add('downloading', objectId);
-			await this._downloadObjectInternal(objectId, abortController.signal);
-			await this.fileStateService.move('downloading', 'completed', objectId);
-		} catch (error) {
-			if (error.name === 'AbortError') {
-				this.logger.info(`Download for object ${objectId} was aborted.`);
-				// cancelDownload moves to 'cancelled' state, just need to clean up 'downloading'
-				await this.fileStateService.remove('downloading', objectId);
-			} else {
-				this.logger.error(`Failed to download object ${objectId}: ${error.message}`);
-                
-                let failureState = 'failure_unknown';
-                if (error instanceof AuthenticationError) {
-                    failureState = 'failure_auth';
-                } else if (error instanceof HttpError) {
-                    failureState = `failure_code_${error.status}`;
-                }
-
-                if (failureState === 'failure_unknown') {
-                    await this.fileStateService.addUnknownFailure(objectId, error);
-                } else {
-				    await this.fileStateService.move('downloading', failureState, objectId);
-                }
-
-				if (await this.downloadManager.getJob(objectId)) {
-					await this.downloadManager.updateJob(objectId, 'failed', 100, "Failed", error.message);
+			await this.downloadManager.updateJob(objectId, 'validating', 5, 'Validating...');
+			const validationResult = await this.validationService.validateAndGetResult(objectId);
+	
+			if (validationResult) {
+				if (validationResult.isValid) {
+					await this.downloadManager.updateJob(objectId, 'completed', 100, 'Model already downloaded and valid');
+					await this.fileStateService.move('validating', 'completed', objectId);
+				} else {
+					this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
+					await this.validationService.deleteObjectFolder(validationResult.folderPath);
+					await this.fileStateService.move('validating', 'validated', objectId); // Ready for prep
 				}
+			} else {
+				await this.fileStateService.move('validating', 'validated', objectId); // Ready for prep
 			}
+		} catch (error) {
+			await this._runErrorHandler(objectId, error, 'validating');
 		} finally {
 			this.cancellationTokens.delete(objectId);
-			// This download is finished, so trigger the queue to see if a new download can start.
 			this._processQueue();
 		}
 	}
-
-	private async _downloadObjectInternal(objectId: string, signal: AbortSignal): Promise<void> {
-		let object: MMFObject;
+	
+	private async _runPreparation(objectId: string): Promise<void> {
+		const abortController = new AbortController();
+		this.cancellationTokens.set(objectId, abortController);
 		try {
-			this.logger.info(`Attempting to retrieve object ${objectId}`);
-			object = await this.apiService.getObjectById(objectId);
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError'); // Check for abortion after API call
-		} catch (objectError) {
-			if (objectError.name === 'AbortError') {
+			await this.downloadManager.updateJob(objectId, 'preparing', 10, 'Preparing metadata...');
+			
+			let object: MMFObject;
+			try {
+				this.logger.info(`Attempting to retrieve object ${objectId}`);
+				object = await this.apiService.getObjectById(objectId);
+				if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+			} catch (objectError) {
+				// ... (error handling for object retrieval)
 				throw objectError;
 			}
-			this.logger.error(`Failed to retrieve object ${objectId}: ${objectError.message}`);
-			object = {
-				id: objectId,
-				name: `MyMiniFactory Object ${objectId}`,
-				description: "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.",
-				url: `https://www.myminifactory.com/object/${objectId}`,
-				images: [],
-				files: {
-					total_count: 0,
-					items: []
-				}
-			};
-			throw objectError;
-		}
-
-		const job = await this.downloadManager.getJob(objectId) || await this.downloadManager.addJob(object);
-		if (object) {
-			await this.downloadManager.updateJobObject(job.id, object);
-		}
-
-		try {
-			await this.downloadManager.updateJob(job.id, 'downloading', 10, "Starting download...");
-			this.logger.info(`Starting download for object ID: ${objectId}`);
-
-			let objectDetailsRetrieved = object.description !== "Unable to retrieve details from the API. This could be due to API changes, authentication issues, or the object may not exist.";
-
-			await this.downloadManager.updateJob(job.id, 'downloading', 20, "Creating folders...");
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-			const objectFolder = await this.createObjectFolder(object);
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-			let mainLocalImagePath: string | undefined;
-
-			if (this.settings.downloadImages && objectDetailsRetrieved) {
-				this.logger.info("Attempting to download images...");
-				await this.downloadManager.updateJob(job.id, 'downloading', 50, "Downloading images...");
-				mainLocalImagePath = await this.downloadImages(job, object, objectFolder, signal);
-			}
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-			await this.downloadManager.updateJob(job.id, 'downloading', 30, "Creating metadata files...");
-			await this.createMetadataFile(object, objectFolder, mainLocalImagePath);
-			await this.saveMetadataFile(object, objectFolder);
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-			await this.downloadManager.updateJob(job.id, 'downloading', 40, "Checking API details...");
-			if (!objectDetailsRetrieved && this.settings.strictApiMode) {
-				throw new Error(`Failed to retrieve object details for ID ${objectId}`);
-			}
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-			await this.downloadManager.updateJob(job.id, 'downloading', 60, "Downloading files...");
-			if (this.settings.downloadFiles) {
-				this.logger.info("Attempting to download 3D model files...");
-				await this.downloadFiles(job, object, objectFolder, signal);
-			}
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 			
-			await this.downloadManager.updateJob(job.id, 'completed', 100, "Completed");
-
-		} catch (error) {
-			if (error.name === 'AbortError') {
-				this.logger.info(`Download for object ${objectId} was aborted in _downloadObjectInternal.`);
-			} else {
-				this.logger.error(`Error downloading object ${objectId}: ${error.message}`);
-				// Create fallback download instructions even if file downloads fail
-				try {
-					const objectFolder = await this.createObjectFolder(object);
-					await this.createEmergencyInstructions(objectId, object, objectFolder, error);
-				} catch (instructionsError) {
-					this.logger.error(`Failed to create instructions file: ${instructionsError.message}`);
-				}
+			const job = await this.downloadManager.getJob(objectId);
+			if (object && job) {
+				await this.downloadManager.updateJobObject(job.id, object);
+			} else if (!job) {
+				throw new Error(`Job not found for object ID ${objectId}`);
 			}
-			// IMPORTANT: Re-throw the error so the calling function can handle the state change
-			throw error;
+			
+			await this.downloadManager.updateJob(objectId, 'preparing', 20, "Creating folders...");
+			await this.createObjectFolder(object);
+			if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+			
+			// now ready for image download
+			await this.fileStateService.move('preparing', 'prepared', objectId);
+	
+		} catch (error) {
+			await this._runErrorHandler(objectId, error, 'preparing');
+		} finally {
+			this.cancellationTokens.delete(objectId);
+			this._processQueue();
 		}
 	}
+	
+	private async _runImageDownload(objectId: string): Promise<void> {
+		const abortController = new AbortController();
+		this.cancellationTokens.set(objectId, abortController);
+		try {
+			const job = await this.downloadManager.getJob(objectId);
+			if (!job) throw new Error(`Job not found for object ID ${objectId}`);
+			
+			await this.downloadManager.updateJob(objectId, 'downloading_images', 30, 'Downloading images...');
+			
+			const objectFolder = await this.createObjectFolder(job.object); // Re-create path, it's idempotent
+	
+			if (this.settings.downloadImages) {
+				await this.downloadImages(job, job.object, objectFolder, abortController.signal);
+			}
+			
+			await this.fileStateService.move('downloading_images', 'images_downloaded', objectId);
+	
+		} catch (error) {
+			await this._runErrorHandler(objectId, error, 'downloading_images');
+		} finally {
+			this.cancellationTokens.delete(objectId);
+			this._processQueue();
+		}
+	}
+	
+	private async _runFileDownload(objectId: string): Promise<void> {
+		const abortController = new AbortController();
+		this.cancellationTokens.set(objectId, abortController);
+		try {
+			const job = await this.downloadManager.getJob(objectId);
+			if (!job) throw new Error(`Job not found for object ID ${objectId}`);
+	
+			await this.downloadManager.updateJob(objectId, 'downloading', 70, 'Downloading files...');
+	
+			const objectFolder = await this.createObjectFolder(job.object);
+	
+			if (this.settings.downloadFiles) {
+				await this.downloadFiles(job, job.object, objectFolder, abortController.signal);
+			}
+
+			// Create metadata files at the very end
+			await this.downloadManager.updateJob(job.id, 'downloading', 90, "Creating metadata files...");
+			
+			let mainLocalImagePath: string | undefined;
+			const imagesPath = normalizePath(`${objectFolder}/images`);
+			if (await this.folderExists(imagesPath)) {
+				const imageFiles = (await this.app.vault.adapter.list(imagesPath)).files;
+				if (imageFiles.length > 0) {
+					mainLocalImagePath = imageFiles[0];
+				}
+			}
+			
+			await this.createMetadataFile(job.object, objectFolder, mainLocalImagePath);
+			await this.saveMetadataFile(job.object, objectFolder);
+
+			await this.downloadManager.updateJob(objectId, 'completed', 100, 'Completed');
+			await this.fileStateService.move('downloading', 'completed', objectId);
+	
+		} catch (error) {
+			// Create emergency instructions file on file download failure
+			try {
+				const job = await this.downloadManager.getJob(objectId);
+				if(job) {
+					const objectFolder = await this.createObjectFolder(job.object);
+					await this.createEmergencyInstructions(objectId, job.object, objectFolder, error);
+				}
+			} catch (instructionsError) {
+				this.logger.error(`Failed to create instructions file: ${instructionsError.message}`);
+			}
+			await this._runErrorHandler(objectId, error, 'downloading');
+	
+		} finally {
+			this.cancellationTokens.delete(objectId);
+			this._processQueue();
+		}
+	}
+	
 
 	/**
 	 * Create emergency download instructions when everything else fails
