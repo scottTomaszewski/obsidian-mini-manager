@@ -11,6 +11,8 @@ export class DownloadManagerModal extends Modal {
     private listener: (jobs: DownloadJob[]) => void;
     private plugin: MiniManagerPlugin;
     private objectId: string = "";
+    private clearCompletedButton?: HTMLButtonElement;
+    private clearFailedButton?: HTMLButtonElement;
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
@@ -74,6 +76,7 @@ export class DownloadManagerModal extends Modal {
         new Setting(contentEl)
             .addButton(button => {
                 const completedCount = this.downloadManager.getCompletedJobsCount();
+                this.clearCompletedButton = button.buttonEl;
                 button
                     .setButtonText(`Clear Completed (${completedCount})`)
                     .setDisabled(completedCount === 0)
@@ -83,6 +86,7 @@ export class DownloadManagerModal extends Modal {
             })
             .addButton(button => {
                 const failedCount = this.downloadManager.getFailedJobsCount();
+                this.clearFailedButton = button.buttonEl;
                 button
                     .setButtonText(`Clear Failed (${failedCount})`)
                     .setDisabled(failedCount === 0)
@@ -120,19 +124,16 @@ export class DownloadManagerModal extends Modal {
     }
 
     private redrawButtons(contentEl: HTMLElement) {
-        const clearCompletedButton = contentEl.querySelector('.setting-item-control button:first-child') as HTMLButtonElement;
-        const clearFailedButton = contentEl.querySelector('.setting-item-control button:nth-child(2)') as HTMLButtonElement;
-
-        if (clearCompletedButton) {
+        if (this.clearCompletedButton) {
             const completedCount = this.downloadManager.getCompletedJobsCount();
-            clearCompletedButton.textContent = `Clear Completed (${completedCount})`;
-            clearCompletedButton.disabled = completedCount === 0;
+            this.clearCompletedButton.textContent = `Clear Completed (${completedCount})`;
+            this.clearCompletedButton.disabled = completedCount === 0;
         }
 
-        if (clearFailedButton) {
+        if (this.clearFailedButton) {
             const failedCount = this.downloadManager.getFailedJobsCount();
-            clearFailedButton.textContent = `Clear Failed (${failedCount})`;
-            clearFailedButton.disabled = failedCount === 0;
+            this.clearFailedButton.textContent = `Clear Failed (${failedCount})`;
+            this.clearFailedButton.disabled = failedCount === 0;
         }
     }
 
