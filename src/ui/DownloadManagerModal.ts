@@ -234,21 +234,31 @@ export class DownloadManagerModal extends Modal {
     }
 
     private applyProgressStyle(progressEl: HTMLProgressElement, status: DownloadJob['status']) {
-        progressEl.className = ''; // reset
-        const paused = this.plugin.downloader.isPausedState();
+        const setColor = (varName: string) => {
+            progressEl.style.setProperty('accent-color', `var(${varName})`);
+        };
 
-        if (paused || status === 'cancelled') {
+        const paused = this.plugin.downloader.isPausedState() || status === 'cancelled';
+
+        if (paused) {
+            setColor('--text-warning');
             progressEl.classList.add('paused');
             return;
         }
 
+        progressEl.className = ''; // reset incidental classes
+
         if (status === 'failed') {
+            setColor('--text-error');
             progressEl.classList.add('error');
         } else if (status === '80_completed') {
+            setColor('--text-success');
             progressEl.classList.add('complete');
         } else if (status === '00_queued' || status === 'pending') {
+            setColor('--text-muted');
             progressEl.classList.add('queued');
         } else {
+            setColor('--interactive-accent');
             progressEl.classList.add('processing');
         }
     }
