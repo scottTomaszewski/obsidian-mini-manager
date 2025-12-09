@@ -41,7 +41,7 @@ export class MMFDownloader {
 			this.isPaused = false;
 			new Notice('Resuming paused downloads...');
 		} else {
-			new Notice('Processing queued models...');
+			new Notice('Processing 00_queued models...');
 		}
 		this._processQueue();
 	}
@@ -77,8 +77,8 @@ export class MMFDownloader {
 			return;
 		}
 
-		await this.downloadManager.updateJob(job.id, 'queued', 0, 'In queue...');
-		await this.fileStateService.add('queued', objectId);
+		await this.downloadManager.updateJob(job.id, '00_queued', 0, 'In queue...');
+		await this.fileStateService.add('00_queued', objectId);
 		this._processQueue();
 	}
 
@@ -96,15 +96,15 @@ export class MMFDownloader {
 		for (const id of ids) {
 			const existingJob = this.downloadManager.getJob(id);
 			if (existingJob) {
-				if (existingJob.status === 'completed') {
-					this.logger.info(`Skipping already completed job ${id}`);
+				if (existingJob.status === '80_completed') {
+					this.logger.info(`Skipping already 80_completed job ${id}`);
 					continue;
 				} else if (existingJob.status === 'failed') {
 					this.logger.info(`Retrying failed job ${id}`);
 					this.downloadManager.removeJob(id);
 					await this.fileStateService.remove('failed', id);
 				} else {
-					this.logger.info(`Skipping already queued/downloading job ${id}`);
+					this.logger.info(`Skipping already 00_queued/downloading job ${id}`);
 					continue;
 				}
 			}
@@ -121,7 +121,7 @@ export class MMFDownloader {
 		}
 
 		// Move to a 'cancelled' state from any of the active states
-		for (const state of ['queued', 'validating', 'preparing', 'downloading_images', 'downloading']) {
+		for (const state of ['00_queued', '10_validating', '30_preparing', '50_downloading_images', '70_downloading']) {
 			await this.fileStateService.move(state, 'cancelled', objectId);
 		}
 
@@ -141,48 +141,48 @@ export class MMFDownloader {
 
 		try {
 			// --- Heavy Task Pool (File Downloads) ---
-			const activeFileDownloads = (await this.fileStateService.getAll('downloading')).length;
+			const activeFileDownloads = (await this.fileStateService.getAll('70_downloading')).length;
 			let availableFileSlots = this.settings.maxConcurrentDownloads - activeFileDownloads;
 			if (availableFileSlots > 0) {
-				const readyForFiles = await this.fileStateService.getAll('images_downloaded');
+				const readyForFiles = await this.fileStateService.getAll('60_images_downloaded');
 				if (readyForFiles.length > 0) {
 					const objectId = readyForFiles[0];
-					await this.fileStateService.move('images_downloaded', 'downloading', objectId);
+					await this.fileStateService.move('60_images_downloaded', '70_downloading', objectId);
 					this._runFileDownload(objectId); // fire and forget
 					availableFileSlots--; 
 				}
 			}
 
 			// --- Light Task Pool (Validation, Prep, Images) ---
-			const activeLightTasks = (await this.fileStateService.getAll('validating')).length +
-									(await this.fileStateService.getAll('preparing')).length +
-									(await this.fileStateService.getAll('downloading_images')).length;
+			const activeLightTasks = (await this.fileStateService.getAll('10_validating')).length +
+									(await this.fileStateService.getAll('30_preparing')).length +
+									(await this.fileStateService.getAll('50_downloading_images')).length;
 			let availableLightSlots = this.settings.maxConcurrentLightTasks - activeLightTasks;
 
 			while (availableLightSlots > 0) {
 				// Prioritize tasks further down the pipeline
-				const readyForImages = await this.fileStateService.getAll('prepared');
+				const readyForImages = await this.fileStateService.getAll('40_prepared');
 				if (readyForImages.length > 0) {
 					const objectId = readyForImages[0];
-					await this.fileStateService.move('prepared', 'downloading_images', objectId);
+					await this.fileStateService.move('40_prepared', '50_downloading_images', objectId);
 					this._runImageDownload(objectId);
 					availableLightSlots--;
 					continue;
 				}
 
-				const readyForPrep = await this.fileStateService.getAll('validated');
+				const readyForPrep = await this.fileStateService.getAll('20_validated');
 				if (readyForPrep.length > 0) {
 					const objectId = readyForPrep[0];
-					await this.fileStateService.move('validated', 'preparing', objectId);
+					await this.fileStateService.move('20_validated', '30_preparing', objectId);
 					this._runPreparation(objectId);
 					availableLightSlots--;
 					continue;
 				}
 
-				const queued = await this.fileStateService.getAll('queued');
+				const queued = await this.fileStateService.getAll('00_queued');
 				if (queued.length > 0) {
 					const objectId = queued[0];
-					await this.fileStateService.move('queued', 'validating', objectId);
+					await this.fileStateService.move('00_queued', '10_validating', objectId);
 					this._runValidation(objectId);
 					availableLightSlots--;
 					continue;
@@ -228,23 +228,27 @@ export class MMFDownloader {
 		const abortController = new AbortController();
 		this.cancellationTokens.set(objectId, abortController);
 		try {
-			await this.downloadManager.updateJob(objectId, 'validating', 5, 'Validating...');
+			await this.downloadManager.updateJob(objectId, '10_validating', 5, 'Validating...');
+			this.logger.info(`(model ${objectId}) State updated to 'validating'`);
 			const validationResult = await this.validationService.validateAndGetResult(objectId);
 	
 			if (validationResult) {
 				if (validationResult.isValid) {
-					await this.downloadManager.updateJob(objectId, 'completed', 100, 'Model already downloaded and valid');
-					await this.fileStateService.move('validating', 'completed', objectId);
+					await this.downloadManager.updateJob(objectId, '80_completed', 100, 'Model already downloaded and valid');
+					await this.fileStateService.move('10_validating', '80_completed', objectId);
+					this.logger.info(`(model ${objectId}) State updated to 'complete'`);
 				} else {
 					this.logger.info(`Validation failed for object ${objectId}. Deleting folder and re-downloading. Errors: ${validationResult.errors.join(', ')}`);
 					await this.validationService.deleteObjectFolder(validationResult.folderPath);
-					await this.fileStateService.move('validating', 'validated', objectId); // Ready for prep
+					await this.fileStateService.move('10_validating', '20_validated', objectId); // Ready for prep
+					this.logger.info(`(model ${objectId}) State updated to 'validated'`);
 				}
 			} else {
-				await this.fileStateService.move('validating', 'validated', objectId); // Ready for prep
+				await this.fileStateService.move('10_validating', '20_validated', objectId); // Ready for prep
+				this.logger.info(`(model ${objectId}) State updated to 'validated'`);
 			}
 		} catch (error) {
-			await this._runErrorHandler(objectId, error, 'validating');
+			await this._runErrorHandler(objectId, error, '10_validating');
 		} finally {
 			this.cancellationTokens.delete(objectId);
 			this._processQueue();
@@ -255,7 +259,7 @@ export class MMFDownloader {
 		const abortController = new AbortController();
 		this.cancellationTokens.set(objectId, abortController);
 		try {
-			await this.downloadManager.updateJob(objectId, 'preparing', 10, 'Preparing metadata...');
+			await this.downloadManager.updateJob(objectId, '30_preparing', 10, 'Preparing metadata...');
 			
 			let object: MMFObject;
 			try {
@@ -274,15 +278,15 @@ export class MMFDownloader {
 				throw new Error(`Job not found for object ID ${objectId}`);
 			}
 			
-			await this.downloadManager.updateJob(objectId, 'preparing', 20, "Creating folders...");
+			await this.downloadManager.updateJob(objectId, '30_preparing', 20, "Creating folders...");
 			await this.createObjectFolder(object);
 			if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
 			
 			// now ready for image download
-			await this.fileStateService.move('preparing', 'prepared', objectId);
+			await this.fileStateService.move('30_preparing', '40_prepared', objectId);
 	
 		} catch (error) {
-			await this._runErrorHandler(objectId, error, 'preparing');
+			await this._runErrorHandler(objectId, error, '30_preparing');
 		} finally {
 			this.cancellationTokens.delete(objectId);
 			this._processQueue();
@@ -296,7 +300,7 @@ export class MMFDownloader {
 			const job = await this.downloadManager.getJob(objectId);
 			if (!job) throw new Error(`Job not found for object ID ${objectId}`);
 			
-			await this.downloadManager.updateJob(objectId, 'downloading_images', 30, 'Downloading images...');
+			await this.downloadManager.updateJob(objectId, '50_downloading_images', 30, 'Downloading images...');
 			
 			const objectFolder = await this.createObjectFolder(job.object); // Re-create path, it's idempotent
 	
@@ -304,10 +308,10 @@ export class MMFDownloader {
 				await this.downloadImages(job, job.object, objectFolder, abortController.signal);
 			}
 			
-			await this.fileStateService.move('downloading_images', 'images_downloaded', objectId);
+			await this.fileStateService.move('50_downloading_images', '60_images_downloaded', objectId);
 	
 		} catch (error) {
-			await this._runErrorHandler(objectId, error, 'downloading_images');
+			await this._runErrorHandler(objectId, error, '50_downloading_images');
 		} finally {
 			this.cancellationTokens.delete(objectId);
 			this._processQueue();
@@ -321,7 +325,7 @@ export class MMFDownloader {
 			const job = await this.downloadManager.getJob(objectId);
 			if (!job) throw new Error(`Job not found for object ID ${objectId}`);
 	
-			await this.downloadManager.updateJob(objectId, 'downloading', 70, 'Downloading files...');
+			await this.downloadManager.updateJob(objectId, '70_downloading', 70, 'Downloading files...');
 	
 			const objectFolder = await this.createObjectFolder(job.object);
 	
@@ -330,7 +334,7 @@ export class MMFDownloader {
 			}
 
 			// Create metadata files at the very end
-			await this.downloadManager.updateJob(job.id, 'downloading', 90, "Creating metadata files...");
+			await this.downloadManager.updateJob(job.id, '70_downloading', 90, "Creating metadata files...");
 			
 			let mainLocalImagePath: string | undefined;
 			const imagesPath = normalizePath(`${objectFolder}/images`);
@@ -344,8 +348,8 @@ export class MMFDownloader {
 			await this.createMetadataFile(job.object, objectFolder, mainLocalImagePath);
 			await this.saveMetadataFile(job.object, objectFolder);
 
-			await this.downloadManager.updateJob(objectId, 'completed', 100, 'Completed');
-			await this.fileStateService.move('downloading', 'completed', objectId);
+			await this.downloadManager.updateJob(objectId, '80_completed', 100, 'Completed');
+			await this.fileStateService.move('70_downloading', '80_completed', objectId);
 	
 		} catch (error) {
 			// Create emergency instructions file on file download failure
@@ -358,7 +362,7 @@ export class MMFDownloader {
 			} catch (instructionsError) {
 				this.logger.error(`Failed to create instructions file: ${instructionsError.message}`);
 			}
-			await this._runErrorHandler(objectId, error, 'downloading');
+			await this._runErrorHandler(objectId, error, '70_downloading');
 	
 		} finally {
 			this.cancellationTokens.delete(objectId);

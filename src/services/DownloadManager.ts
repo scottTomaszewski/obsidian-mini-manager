@@ -4,7 +4,7 @@ import { FileStateService } from './FileStateService';
 export interface DownloadJob {
 	id: string;
 	object: MMFObject;
-	status: 'pending' | 'downloading' | 'extracting' | 'completed' | 'failed' | 'validating' | 'cancelled' | 'queued' | 'preparing' | 'downloading_images';
+	status: 'pending' | '70_downloading' | 'extracting' | '80_completed' | 'failed' | '10_validating' | 'cancelled' | '00_queued' | '30_preparing' | '50_downloading_images' | '20_validated' | '40_prepared' | '60_images_downloaded';
 	progress: number; // 0-100
 	progressMessage: string;
 	error?: string;
@@ -104,12 +104,12 @@ export class DownloadManager {
 		}
 		await this.fileStateService.removeJob(id);
 		// also remove from any state files
-		await this.fileStateService.remove('queued', id);
-		await this.fileStateService.remove('downloading', id);
-		await this.fileStateService.remove('completed', id);
+		await this.fileStateService.remove('00_queued', id);
+		await this.fileStateService.remove('70_downloading', id);
+		await this.fileStateService.remove('80_completed', id);
 		await this.fileStateService.remove('failed', id);
 		await this.fileStateService.remove('cancelled', id);
-		await this.fileStateService.remove('validating', id);
+		await this.fileStateService.remove('10_validating', id);
 
 		this.notifyListeners();
 	}

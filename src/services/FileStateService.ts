@@ -2,6 +2,18 @@ import { App, normalizePath } from 'obsidian';
 import { DownloadJob } from './DownloadManager';
 import { LoggerService } from './LoggerService';
 
+const STATE_PREFIX_MAP: { [key: string]: string } = {
+    'queued': '00_queued',
+    'validating': '10_validating',
+    'validated': '20_validated',
+    'preparing': '30_preparing',
+    'prepared': '40_prepared',
+    'downloading_images': '50_downloading_images',
+    'images_downloaded': '60_images_downloaded',
+    'downloading': '70_downloading', // This is for downloading files
+    'completed': '80_completed'
+};
+
 export class FileStateService {
 	private static instance: FileStateService;
 	private app: App;
@@ -46,8 +58,12 @@ export class FileStateService {
 		}
 	}
 
+	private getActualStateName(state: string): string {
+		return STATE_PREFIX_MAP[state] || state;
+	}
+
 	private getStateFilePath(state: string): string {
-		return normalizePath(`${this.stateDir}/${state}.txt`);
+		return normalizePath(`${this.stateDir}/${this.getActualStateName(state)}.txt`);
 	}
 
 	private getJobFilePath(objectId: string): string {
@@ -55,7 +71,7 @@ export class FileStateService {
 	}
 
 	private getLockFilePath(state: string): string {
-		return normalizePath(`${this.lockDir}/${state}.lock`);
+		return normalizePath(`${this.lockDir}/${this.getActualStateName(state)}.lock`);
 	}
 
 	private async acquireLock(state: string): Promise<void> {
@@ -231,16 +247,24 @@ export class FileStateService {
 		const allIds = new Set<string>();
 		const stateFiles = await this.app.vault.adapter.list(this.stateDir);
 		for (const stateFile of stateFiles.files) {
-			const state = stateFile.split('/').pop()?.replace('.txt', '');
-			// we lock the state file to prevent reading it while it's being written to.
-			if (state) {
-				await this.acquireLock(state);
-				try {
-					const ids = await this.getIds(state);
-					ids.forEach(id => allIds.add(id));
-				} finally {
-					await this.releaseLock(state);
+			let stateFileName = stateFile.split('/').pop()?.replace('.txt', '');
+			if (!stateFileName) continue;
+
+			let originalStateName = stateFileName;
+			for (const key in STATE_PREFIX_MAP) {
+				if (STATE_PREFIX_MAP.hasOwnProperty(key) && STATE_PREFIX_MAP[key] === stateFileName) {
+					originalStateName = key;
+					break;
 				}
+			}
+
+			// we lock the state file to prevent reading it while it's being written to.
+			await this.acquireLock(originalStateName);
+			try {
+				const ids = await this.getIds(originalStateName);
+				ids.forEach(id => allIds.add(id));
+			} finally {
+				await this.releaseLock(originalStateName);
 			}
 		}
 		return Array.from(allIds);
