@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.24
+
+- Better performance interacting with all.txt
+
 ## 0.0.23
 
 - Hitting "resume downloads" will check queue for newly added model ids
