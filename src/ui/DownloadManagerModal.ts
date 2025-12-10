@@ -9,6 +9,9 @@ export class DownloadManagerModal extends Modal {
     private downloadManager: DownloadManager;
     private jobsContainer: HTMLElement;
     private statsContainer: HTMLElement;
+    private statsTopRow?: HTMLElement;
+    private statsBottomRow?: HTMLElement;
+    private statsCards: Map<string, HTMLElement> = new Map();
     private listener: (jobs: DownloadJob[]) => void;
     private plugin: MiniManagerPlugin;
     private objectId: string = "";
@@ -271,21 +274,56 @@ export class DownloadManagerModal extends Modal {
 
     private async renderStats() {
         if (!this.statsContainer) return;
-        this.statsContainer.empty();
-        const title = this.statsContainer.createEl('h4', { text: 'Queue Stats' });
-        title.addClass('stats-title');
+        if (!this.statsContainer.hasClass('download-stats')) {
+            this.statsContainer.addClass('download-stats');
+        }
 
-        const row = this.statsContainer.createDiv('stats-row');
+        if (!this.statsTopRow) {
+            this.statsTopRow = this.statsContainer.createDiv('stats-row');
+        }
+        if (!this.statsBottomRow) {
+            this.statsBottomRow = this.statsContainer.createDiv('stats-row stats-row-secondary');
+        }
+
         try {
             const counts = await this.plugin.fileStateService.getStateCounts();
             const merged = this.mergeCounts(counts);
-            Object.keys(merged).forEach(key => {
-                const card = row.createDiv('stats-card');
-                card.createDiv('stats-count').setText(`${merged[key]}`);
-                card.createDiv('stats-label').setText(key.replace("_", " "));
+            const topKeys = ['queued', 'validating', 'preparing', 'downloading_image', 'downloading_files'];
+            const bottomKeys = ['completed', 'failed', 'cancelled'];
+
+            const updateCard = (row: HTMLElement, key: string, value: string) => {
+                let card = this.statsCards.get(key);
+                if (!card) {
+                    card = row.createDiv('stats-card');
+                    card.createDiv('stats-count');
+                    const labelEl = card.createDiv('stats-label');
+                    labelEl.setText(key.replace("_", " "));
+                    this.statsCards.set(key, card);
+                    card.setAttr('data-key', key);
+                    card.setAttr('data-label', key.replace("_", " "));
+                }
+                const countEl = card.querySelector('.stats-count') as HTMLElement;
+                if (countEl) countEl.setText(value);
+            };
+
+            topKeys.forEach(key => {
+                if (merged[key] !== undefined) {
+                    updateCard(this.statsTopRow!, key, `${merged[key]}`);
+                }
+            });
+
+            bottomKeys.forEach(key => {
+                if (merged[key] !== undefined) {
+                    updateCard(this.statsBottomRow!, key, `${merged[key]}`);
+                }
+            });
+
+            // Hide cards not used anymore to avoid flicker from removals
+            const activeKeys = new Set([...topKeys, ...bottomKeys].filter(k => merged[k] !== undefined));
+            this.statsCards.forEach((card, key) => {
+                card.toggleClass('hidden', !activeKeys.has(key));
             });
         } catch (e) {
-            this.statsContainer.createEl('p', { text: 'Unable to load stats.' });
             console.error(e);
         }
     }

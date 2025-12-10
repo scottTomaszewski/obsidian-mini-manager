@@ -14,24 +14,50 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 8px;
+  justify-content: center;
+}
+
+.stats-row-secondary {
+  margin-top: -4px;
 }
 
 .stats-card {
-  padding: 8px 12px;
+  padding: 4px 6px;
   border-radius: 6px;
   background: var(--background-secondary);
-  min-width: 90px;
+  /*min-width: 120px;*/
+  /*max-width: 150px;*/
+  width: 140px;
   text-align: center;
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stats-count {
   font-size: 1.2em;
   font-weight: 600;
+  line-height: 1.4;
+  min-height: 1.4em;
+  font-variant-numeric: tabular-nums;
 }
 
 .stats-label {
   font-size: 0.8em;
   color: var(--text-muted);
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.download-stats {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stats-card.hidden {
+  visibility: hidden;
 }
 
 .download-job-details {
