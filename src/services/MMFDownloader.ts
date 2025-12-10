@@ -23,6 +23,7 @@ export class MMFDownloader {
 	private isPaused: boolean = false;
 	private isProcessing: boolean = false;
 	private isFileDownloadsPaused: boolean = false;
+	private readonly yieldDelayMs = 0;
 
 	constructor(app: App, settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service, validationService: ValidationService) {
 		this.app = app;
@@ -65,6 +66,10 @@ export class MMFDownloader {
 		const noticeMsg = message || 'File downloads paused after server error. Resume when ready.';
 		new Notice(noticeMsg);
 		this.logger.warn(noticeMsg);
+	}
+
+	private async yieldToEventLoop(): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, this.yieldDelayMs));
 	}
 
 	private async ensureJob(objectId: string): Promise<void> {
@@ -193,6 +198,7 @@ export class MMFDownloader {
 					this._runFileDownload(objectId); // fire and forget
 					availableFileSlots--; 
 				}
+				await this.yieldToEventLoop();
 			}
 
 			// --- Light Task Pool (Validation, Prep, Images) ---
@@ -210,6 +216,7 @@ export class MMFDownloader {
 					await this.fileStateService.move('40_prepared', '50_downloading_images', objectId);
 					this._runImageDownload(objectId);
 					availableLightSlots--;
+					await this.yieldToEventLoop();
 					continue;
 				}
 
@@ -220,22 +227,24 @@ export class MMFDownloader {
 					await this.fileStateService.move('20_validated', '30_preparing', objectId);
 					this._runPreparation(objectId);
 					availableLightSlots--;
+					await this.yieldToEventLoop();
 					continue;
 				}
 
 				const queued = await this.fileStateService.getAll('00_queued');
 				await this.fileStateService.addAll('all', queued);
-				if (queued.length > 0) {
-					const objectId = queued[0];
-					await this.ensureJob(objectId);
-					await this.fileStateService.move('00_queued', '10_validating', objectId);
-					this._runValidation(objectId);
-					availableLightSlots--;
-					continue;
+					if (queued.length > 0) {
+						const objectId = queued[0];
+						await this.ensureJob(objectId);
+						await this.fileStateService.move('00_queued', '10_validating', objectId);
+						this._runValidation(objectId);
+						availableLightSlots--;
+						await this.yieldToEventLoop();
+						continue;
+					}
+					
+					break; // No more light tasks to start
 				}
-				
-				break; // No more light tasks to start
-			}
 		} finally {
 			this.isProcessing = false;
 			this.logger.info(`_processQueue: set isProcessing to false.`);

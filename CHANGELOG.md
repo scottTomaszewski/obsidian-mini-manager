@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.27
+
+- Tasks yield more often to allow other elements to run to improve performance
+
 ## 0.0.26
 
 - Better performance when many items are queued
