@@ -82,10 +82,9 @@ export class DownloadManagerModal extends Modal {
                 this.clearCompletedButton = button.buttonEl;
                 button
                     .setButtonText(`Clear Completed (${completedCount})`)
-                    .setDisabled(completedCount === 0)
                     .onClick(() => {
                         this.downloadManager.clearCompleted();
-                    });
+					});
             })
             .addButton(button => {
                 const failedCount = this.downloadManager.getFailedJobsCount();

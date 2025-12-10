@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.29
+
+- Handles issue with disabled "clear completed" button
+
 ## 0.0.28
 
 - Handles semi-deadlock issue with "clear completed" button
