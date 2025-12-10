@@ -115,11 +115,22 @@ export class DownloadManager {
 	}
 
 	public async clearCompleted() {
+		const completedIds: string[] = [];
 		for (const job of this.jobs.values()) {
 			if (job.status === '80_completed') {
-				await this.removeJob(job.id);
+				completedIds.push(job.id);
 			}
 		}
+		if (completedIds.length === 0) return;
+
+		// Bulk remove state entries first to avoid repetitive file IO
+		await this.fileStateService.bulkRemove(['80_completed', '00_queued', '70_downloading', 'failed', 'cancelled', '10_validating'], completedIds);
+		await this.fileStateService.bulkRemoveJobs(completedIds);
+
+		for (const id of completedIds) {
+			this.jobs.delete(id);
+		}
+		this.notifyListeners();
 	}
 
 	public getCompletedJobsCount(): number {
@@ -131,11 +142,21 @@ export class DownloadManager {
 	}
 
 	public async clearFailed() {
+		const failedIds: string[] = [];
 		for (const job of this.jobs.values()) {
 			if (job.status === 'failed') {
-				await this.removeJob(job.id);
+				failedIds.push(job.id);
 			}
 		}
+		if (failedIds.length === 0) return;
+
+		await this.fileStateService.bulkRemove(['failed', '00_queued', '70_downloading', '80_completed', 'cancelled', '10_validating'], failedIds);
+		await this.fileStateService.bulkRemoveJobs(failedIds);
+
+		for (const id of failedIds) {
+			this.jobs.delete(id);
+		}
+		this.notifyListeners();
 	}
 
 	public subscribe(listener: (jobs: DownloadJob[]) => void) {

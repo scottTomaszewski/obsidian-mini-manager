@@ -146,6 +146,12 @@ export class FileStateService {
 		}
 	}
 
+	public async bulkRemoveJobs(ids: string[]): Promise<void> {
+		for (const id of ids) {
+			await this.removeJob(id);
+		}
+	}
+
 	public async add(state: string, objectId: string | number): Promise<void> {
 		if (!objectId) return; // Do not add empty objectIds
 		await this.acquireLock(state);
@@ -177,6 +183,22 @@ export class FileStateService {
 			}
 		} finally {
 			await this.releaseLock(state);
+		}
+	}
+
+	public async bulkRemove(states: string[], objectIds: (string | number)[]): Promise<void> {
+		for (const state of states) {
+			await this.acquireLock(state);
+			try {
+				let ids = await this.getIds(state);
+				const toRemove = new Set(objectIds.map(id => String(id)));
+				const nextIds = ids.filter(id => !toRemove.has(id));
+				if (nextIds.length !== ids.length) {
+					await this.writeIds(state, nextIds);
+				}
+			} finally {
+				await this.releaseLock(state);
+			}
 		}
 	}
 
