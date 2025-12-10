@@ -8,6 +8,7 @@ import { ValidationModal } from './ValidationModal';
 export class DownloadManagerModal extends Modal {
     private downloadManager: DownloadManager;
     private jobsContainer: HTMLElement;
+    private statsContainer: HTMLElement;
     private listener: (jobs: DownloadJob[]) => void;
     private plugin: MiniManagerPlugin;
     private objectId: string = "";
@@ -115,12 +116,16 @@ export class DownloadManagerModal extends Modal {
                     this.plugin.downloader.resumeDownloads();
                 }));
 
+        this.statsContainer = contentEl.createDiv('download-stats');
+        this.renderStats();
+
         this.jobsContainer = contentEl.createDiv('jobs-container');
         this.renderJobs();
 
         this.listener = (jobs) => {
             this.renderJobs(jobs);
             this.redrawButtons(contentEl);
+            this.renderStats();
         };
         this.downloadManager.subscribe(this.listener);
     }
@@ -262,5 +267,51 @@ export class DownloadManagerModal extends Modal {
             setColor('--interactive-accent');
             progressEl.classList.add('processing');
         }
+    }
+
+    private async renderStats() {
+        if (!this.statsContainer) return;
+        this.statsContainer.empty();
+        const title = this.statsContainer.createEl('h4', { text: 'Queue Stats' });
+        title.addClass('stats-title');
+
+        const row = this.statsContainer.createDiv('stats-row');
+        try {
+            const counts = await this.plugin.fileStateService.getStateCounts();
+            const merged = this.mergeCounts(counts);
+            Object.keys(merged).forEach(key => {
+                const card = row.createDiv('stats-card');
+                card.createDiv('stats-count').setText(`${merged[key]}`);
+                card.createDiv('stats-label').setText(key.replace("_", " "));
+            });
+        } catch (e) {
+            this.statsContainer.createEl('p', { text: 'Unable to load stats.' });
+            console.error(e);
+        }
+    }
+
+    private mergeCounts(counts: Record<string, number>): Record<string, string> {
+        const get = (key: string) => counts[key] || 0;
+
+        const imgDownloadingLabel = `${get('50_downloading_images')}/${get('60_images_downloaded')}`;
+        const downloadingLabel = get('70_downloading');
+
+        const validatingLabel = `${get('10_validating')}/${get('20_validated')}`;
+        const preparingLabel = `${get('30_preparing')}/${get('40_prepared')}`;
+        const queued = get('00_queued');
+        const completed = get('80_completed');
+        const failed = get('failed') + get('failure_auth') + get('failure_unknown');
+        const cancelled = get('cancelled');
+
+        return {
+            queued: `${queued}`,
+            validating: validatingLabel,
+            preparing: preparingLabel,
+			downloading_image: imgDownloadingLabel,
+			downloading_files: `${downloadingLabel}`,
+            completed: `${completed}`,
+            failed: `${failed}`,
+            cancelled: `${cancelled}`
+        };
     }
 }

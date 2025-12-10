@@ -325,6 +325,33 @@ export class FileStateService {
 		return Array.from(allIds);
 	}
 
+	public async getStateCounts(): Promise<Record<string, number>> {
+		const counts: Record<string, number> = {};
+		const stateFiles = await this.app.vault.adapter.list(this.stateDir);
+		for (const stateFile of stateFiles.files) {
+			let stateFileName = stateFile.split('/').pop()?.replace('.txt', '');
+			if (!stateFileName) continue;
+
+			let originalStateName = stateFileName;
+			for (const key in STATE_PREFIX_MAP) {
+				if (STATE_PREFIX_MAP.hasOwnProperty(key) && STATE_PREFIX_MAP[key] === stateFileName) {
+					originalStateName = key;
+					break;
+				}
+			}
+
+			await this.acquireLock(originalStateName);
+			try {
+				const ids = await this.getIds(originalStateName);
+				const label = originalStateName; // use normalized/original state name to avoid duplicates
+				counts[label] = (counts[label] || 0) + ids.length;
+			} finally {
+				await this.releaseLock(originalStateName);
+			}
+		}
+		return counts;
+	}
+
 	public async addUnknownFailure(objectId: string, error: Error): Promise<void> {
 		const state = 'failure_unknown';
 		await this.acquireLock(state);

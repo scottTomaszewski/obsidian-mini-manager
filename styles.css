@@ -9,6 +9,31 @@
   height: 1em;
 }
 
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stats-card {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  min-width: 90px;
+  text-align: center;
+}
+
+.stats-count {
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.stats-label {
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
 .download-job-details {
   display: flex;
   width: 100%;
