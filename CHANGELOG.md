@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.26
+
+- Better performance when many items are queued
+
 ## 0.0.25
 
 - Addresses more performance issues

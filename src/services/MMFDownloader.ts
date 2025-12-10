@@ -45,8 +45,7 @@ export class MMFDownloader {
 			new Notice('Processing 00_queued models...');
 		}
 		this.isFileDownloadsPaused = false;
-		// Ensure any ids present in 00_queued.txt are loaded into jobs map
-		this.syncQueuedJobsFromState().finally(() => this._processQueue());
+		this._processQueue();
 	}
 
 	public pauseDownloads(): void {
@@ -68,26 +67,18 @@ export class MMFDownloader {
 		this.logger.warn(noticeMsg);
 	}
 
-	private async syncQueuedJobsFromState(): Promise<void> {
-		try {
-			const queuedIds = await this.fileStateService.getAll('00_queued');
-			for (const id of queuedIds) {
-				if (!this.downloadManager.getJob(id)) {
-					const placeholder: MMFObject = {
-						id,
-						name: `Object ${id}`,
-						description: '',
-						url: '',
-						images: [],
-						files: { total_count: 0, items: [] }
-					};
-					await this.downloadManager.addJob(placeholder);
-					await this.downloadManager.updateJob(id, '00_queued', 0, 'In queue...');
-				}
-			}
-		} catch (e) {
-			this.logger.error(`Failed to sync queued jobs from state: ${e.message}`);
-		}
+	private async ensureJob(objectId: string): Promise<void> {
+		if (this.downloadManager.getJob(objectId)) return;
+		const placeholder: MMFObject = {
+			id: objectId,
+			name: `Object ${objectId}`,
+			description: '',
+			url: '',
+			images: [],
+			files: { total_count: 0, items: [] }
+		};
+		await this.downloadManager.addJob(placeholder);
+		await this.downloadManager.updateJob(objectId, '00_queued', 0, 'In queue...');
 	}
 
 	private handleAuthError(): void {
@@ -197,6 +188,7 @@ export class MMFDownloader {
 				const readyForFiles = await this.fileStateService.getAll('60_images_downloaded');
 				if (readyForFiles.length > 0) {
 					const objectId = readyForFiles[0];
+					await this.ensureJob(objectId);
 					await this.fileStateService.move('60_images_downloaded', '70_downloading', objectId);
 					this._runFileDownload(objectId); // fire and forget
 					availableFileSlots--; 
@@ -214,6 +206,7 @@ export class MMFDownloader {
 				const readyForImages = await this.fileStateService.getAll('40_prepared');
 				if (readyForImages.length > 0) {
 					const objectId = readyForImages[0];
+					await this.ensureJob(objectId);
 					await this.fileStateService.move('40_prepared', '50_downloading_images', objectId);
 					this._runImageDownload(objectId);
 					availableLightSlots--;
@@ -223,6 +216,7 @@ export class MMFDownloader {
 				const readyForPrep = await this.fileStateService.getAll('20_validated');
 				if (readyForPrep.length > 0) {
 					const objectId = readyForPrep[0];
+					await this.ensureJob(objectId);
 					await this.fileStateService.move('20_validated', '30_preparing', objectId);
 					this._runPreparation(objectId);
 					availableLightSlots--;
@@ -233,6 +227,7 @@ export class MMFDownloader {
 				await this.fileStateService.addAll('all', queued);
 				if (queued.length > 0) {
 					const objectId = queued[0];
+					await this.ensureJob(objectId);
 					await this.fileStateService.move('00_queued', '10_validating', objectId);
 					this._runValidation(objectId);
 					availableLightSlots--;
