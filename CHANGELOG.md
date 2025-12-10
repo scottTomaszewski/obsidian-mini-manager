@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.30
+
+- Adds stats
+
 ## 0.0.29
 
 - Handles issue with disabled "clear completed" button
