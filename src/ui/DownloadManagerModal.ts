@@ -332,10 +332,10 @@ export class DownloadManagerModal extends Modal {
 	private mergeCounts(counts: Record<string, number>): Record<string, string> {
         const get = (key: string) => counts[key] || 0;
 
-        const validatingLabel = `${get('validating')}/${get('validated')}`;
-        const preparingLabel = `${get('preparing')}/${get('prepared')}`;
-        const downloadingImagesLabel = `${get('downloading_images')}/${get('images_downloaded')}`;
-        const downloadingFilesLabel = `${get('downloading')}`;
+        const validatingLabel = `${get('validating')}`;
+        const preparingLabel = `${get('preparing')}/${get('preparing')+get('validated')}`;
+        const downloadingImagesLabel = `${get('downloading_images')}/${get('downloading_images')+get('prepared')}`;
+        const downloadingFilesLabel = `${get('downloading')}/${get('downloading')+get('images_downloaded')}`;
 
         const queued = get('queued');
         const completed = get('completed');
