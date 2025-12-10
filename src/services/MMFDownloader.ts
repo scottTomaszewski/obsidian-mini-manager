@@ -818,6 +818,9 @@ export class MMFDownloader {
 
 					if (response.status === 403) {
 						this.pauseFileDownloads('Received 403 while downloading files. File downloads paused; resume after resolving authentication.');
+						// Move this job out of the downloading state immediately so the pool frees up
+						await this.fileStateService.move('70_downloading', 'failure_code_403', job.id);
+						await this.downloadManager.updateJob(job.id, 'failed', 100, 'Forbidden (403) during file download');
 						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status);
 					}
 

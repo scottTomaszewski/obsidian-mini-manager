@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.34
+
+- Better handling of 403s
+
 ## 0.0.33
 
 - Better stats
