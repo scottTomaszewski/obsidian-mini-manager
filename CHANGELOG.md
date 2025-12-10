@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.31
+
+- Corrects stats handling
+
 ## 0.0.30
 
 - Adds stats

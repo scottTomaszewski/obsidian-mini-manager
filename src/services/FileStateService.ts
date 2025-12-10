@@ -328,6 +328,11 @@ export class FileStateService {
 	public async getStateCounts(): Promise<Record<string, number>> {
 		const counts: Record<string, number> = {};
 		const stateFiles = await this.app.vault.adapter.list(this.stateDir);
+		if (stateFiles.files.length === 0) {
+			return counts;
+		}
+
+		// Group by normalized/original state name to avoid duplicates
 		for (const stateFile of stateFiles.files) {
 			let stateFileName = stateFile.split('/').pop()?.replace('.txt', '');
 			if (!stateFileName) continue;

@@ -58,6 +58,7 @@
 
 .stats-card.hidden {
   visibility: hidden;
+  pointer-events: none;
 }
 
 .download-job-details {

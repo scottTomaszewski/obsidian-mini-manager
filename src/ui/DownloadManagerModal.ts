@@ -321,23 +321,24 @@ export class DownloadManagerModal extends Modal {
             // Hide cards not used anymore to avoid flicker from removals
             const activeKeys = new Set([...topKeys, ...bottomKeys].filter(k => merged[k] !== undefined));
             this.statsCards.forEach((card, key) => {
-                card.toggleClass('hidden', !activeKeys.has(key));
+                const hidden = !activeKeys.has(key);
+                card.toggleClass('hidden', hidden);
             });
         } catch (e) {
             console.error(e);
         }
     }
 
-    private mergeCounts(counts: Record<string, number>): Record<string, string> {
+	private mergeCounts(counts: Record<string, number>): Record<string, string> {
         const get = (key: string) => counts[key] || 0;
 
-        const imgDownloadingLabel = `${get('50_downloading_images')}/${get('60_images_downloaded')}`;
-        const downloadingLabel = get('70_downloading');
+        const validatingLabel = `${get('validating')}/${get('validated')}`;
+        const preparingLabel = `${get('preparing')}/${get('prepared')}`;
+        const downloadingImagesLabel = `${get('downloading_images')}/${get('images_downloaded')}`;
+        const downloadingFilesLabel = `${get('downloading')}`;
 
-        const validatingLabel = `${get('10_validating')}/${get('20_validated')}`;
-        const preparingLabel = `${get('30_preparing')}/${get('40_prepared')}`;
-        const queued = get('00_queued');
-        const completed = get('80_completed');
+        const queued = get('queued');
+        const completed = get('completed');
         const failed = get('failed') + get('failure_auth') + get('failure_unknown');
         const cancelled = get('cancelled');
 
@@ -345,8 +346,8 @@ export class DownloadManagerModal extends Modal {
             queued: `${queued}`,
             validating: validatingLabel,
             preparing: preparingLabel,
-			downloading_image: imgDownloadingLabel,
-			downloading_files: `${downloadingLabel}`,
+			downloading_image: downloadingImagesLabel,
+			downloading_files: downloadingFilesLabel,
             completed: `${completed}`,
             failed: `${failed}`,
             cancelled: `${cancelled}`
