@@ -15,6 +15,7 @@ export class DownloadManager {
 	private fileStateService: FileStateService;
 	private jobs: Map<string, DownloadJob> = new Map();
 	private listeners: ((jobs: DownloadJob[]) => void)[] = [];
+	private readonly yieldDelayMs = 0;
 
 	private constructor(fileStateService: FileStateService) {
 		this.fileStateService = fileStateService;
@@ -123,12 +124,16 @@ export class DownloadManager {
 		}
 		if (completedIds.length === 0) return;
 
-		// Bulk remove state entries first to avoid repetitive file IO
-		await this.fileStateService.bulkRemove(['80_completed', '00_queued', '70_downloading', 'failed', 'cancelled', '10_validating'], completedIds);
+		await this.fileStateService.bulkRemove(['80_completed'], completedIds);
 		await this.fileStateService.bulkRemoveJobs(completedIds);
 
-		for (const id of completedIds) {
-			this.jobs.delete(id);
+		const batchSize = 200;
+		for (let i = 0; i < completedIds.length; i += batchSize) {
+			const batch = completedIds.slice(i, i + batchSize);
+			for (const id of batch) {
+				this.jobs.delete(id);
+			}
+			await this.yieldToEventLoop();
 		}
 		this.notifyListeners();
 	}
@@ -170,5 +175,9 @@ export class DownloadManager {
 	private notifyListeners() {
 		const jobs = this.getJobs();
 		this.listeners.forEach(listener => listener(jobs));
+	}
+
+	private async yieldToEventLoop(): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, this.yieldDelayMs));
 	}
 }
