@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.25
+
+- Addresses more performance issues
+
 ## 0.0.24
 
 - Better performance interacting with all.txt

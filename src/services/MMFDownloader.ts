@@ -230,6 +230,7 @@ export class MMFDownloader {
 				}
 
 				const queued = await this.fileStateService.getAll('00_queued');
+				await this.fileStateService.addAll('all', queued);
 				if (queued.length > 0) {
 					const objectId = queued[0];
 					await this.fileStateService.move('00_queued', '10_validating', objectId);

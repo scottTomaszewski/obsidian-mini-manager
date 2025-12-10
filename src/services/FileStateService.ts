@@ -158,9 +158,32 @@ export class FileStateService {
 		try {
 			const ids = await this.getIds(state);
 			const idSet = new Set(ids);
-			
+
 			const originalSize = idSet.size;
 			idSet.add(String(objectId).trim());
+
+			if (idSet.size > originalSize) {
+				await this.writeIds(state, Array.from(idSet));
+			}
+		} finally {
+			await this.releaseLock(state);
+		}
+	}
+
+	public async addAll(state: string, objectIds: Array<string | number>): Promise<void> {
+		if (!objectIds || objectIds.length === 0) return;
+
+		await this.acquireLock(state);
+		try {
+			const ids = await this.getIds(state);
+			const idSet = new Set(ids);
+
+			const originalSize = idSet.size;
+
+			for (const objectId of objectIds) {
+				if (!objectId) continue; // skip empty values
+				idSet.add(String(objectId).trim());
+			}
 
 			if (idSet.size > originalSize) {
 				await this.writeIds(state, Array.from(idSet));
@@ -309,7 +332,7 @@ export class FileStateService {
 			const filePath = this.getStateFilePath(state);
 			const sanitizedError = error.message.replace(/(\r\n|\n|\r)/gm, " ");
 			const line = `${objectId}:${sanitizedError}\n`;
-			
+
 			let content = '';
 			if (await this.app.vault.adapter.exists(filePath)) {
 				content = await this.app.vault.adapter.read(filePath);
