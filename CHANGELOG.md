@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.32
+
+- Better handling of illegal characters in files
+
 ## 0.0.31
 
 - Corrects stats handling

@@ -927,7 +927,8 @@ export class MMFDownloader {
 	}
 
 	private sanitizePath(path: string): string {
-		return path.replace(/[\\/:*?"<>|]/g, '_').trim();
+		// Replace illegal characters and ensure no trailing dots/spaces which are disallowed on some filesystems
+		return path.replace(/[\\/:*?"<>|]/g, '_').replace(/[. ]+$/, '').trim();
 	}
 
 	private formatFileSize(bytes: number): string {
