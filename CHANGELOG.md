@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.35
+## 0.0.36
 
 - Better handling of 403s
 

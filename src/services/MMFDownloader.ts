@@ -268,6 +268,8 @@ export class MMFDownloader {
 	
 			if (failureState === 'failure_unknown') {
 				await this.fileStateService.addUnknownFailure(objectId, error);
+				// Ensure we free up the current state slot even for unknown errors
+				await this.fileStateService.move(fromState, 'failure_unknown', objectId);
 			} else {
 				await this.fileStateService.move(fromState, failureState, objectId);
 			}
