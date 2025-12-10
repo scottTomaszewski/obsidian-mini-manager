@@ -189,15 +189,15 @@ export class MMFDownloader {
 				availableFileSlots = 0;
 				this.logger.info("File downloads paused; skipping heavy task dispatch.");
 			}
-			if (availableFileSlots > 0) {
+			while (availableFileSlots > 0) {
 				const readyForFiles = await this.fileStateService.getAll('60_images_downloaded');
-				if (readyForFiles.length > 0) {
-					const objectId = readyForFiles[0];
-					await this.ensureJob(objectId);
-					await this.fileStateService.move('60_images_downloaded', '70_downloading', objectId);
-					this._runFileDownload(objectId); // fire and forget
-					availableFileSlots--; 
-				}
+				if (readyForFiles.length === 0) break;
+
+				const objectId = readyForFiles[0];
+				await this.ensureJob(objectId);
+				await this.fileStateService.move('60_images_downloaded', '70_downloading', objectId);
+				this._runFileDownload(objectId); // fire and forget
+				availableFileSlots--;
 				await this.yieldToEventLoop();
 			}
 
@@ -821,6 +821,7 @@ export class MMFDownloader {
 						// Move this job out of the downloading state immediately so the pool frees up
 						await this.fileStateService.move('70_downloading', 'failure_code_403', job.id);
 						await this.downloadManager.updateJob(job.id, 'failed', 100, 'Forbidden (403) during file download');
+						this.isProcessing = false; // allow queue to pick up others
 						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status);
 					}
 
