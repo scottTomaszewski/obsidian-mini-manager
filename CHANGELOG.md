@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.28
+
+- Handles semi-deadlock issue with "clear completed" button
+
 ## 0.0.27
 
 - Tasks yield more often to allow other elements to run to improve performance
