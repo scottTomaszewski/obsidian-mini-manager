@@ -90,6 +90,16 @@ export default class MiniManagerPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'requeue-active-jobs',
+			name: 'Re-queue active jobs',
+			callback: async () => {
+				const requeuedIds = await this.fileStateService.requeueActiveJobs();
+				this.logger.info(`Re-queued ${requeuedIds.length} active job(s) from job files${requeuedIds.length ? `: ${requeuedIds.join(', ')}` : ''}.`);
+				new Notice(`Re-queued ${requeuedIds.length} active job${requeuedIds.length === 1 ? '' : 's'}.`, 5000);
+			}
+		});
+
+		this.addCommand({
 			id: 'validate-all-models',
 			name: 'Validate all downloaded models',
 			callback: async () => {

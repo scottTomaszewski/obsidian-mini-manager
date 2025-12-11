@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.39
+
+- Helper command to requeue stuck jobs
+
 ## 0.0.38
 
 - Adjusting how retries are handled

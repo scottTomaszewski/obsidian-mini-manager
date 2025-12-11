@@ -139,6 +139,36 @@ export class FileStateService {
 		}
 	}
 
+	public async getAllJobFileIds(): Promise<string[]> {
+		if (!await this.app.vault.adapter.exists(this.jobsDir)) {
+			return [];
+		}
+
+		const jobFiles = await this.app.vault.adapter.list(this.jobsDir);
+		const ids = new Set<string>();
+		for (const jobFile of jobFiles.files) {
+			const objectId = jobFile.split('/').pop()?.replace('.json', '');
+			if (objectId) {
+				ids.add(objectId);
+			}
+		}
+		return Array.from(ids);
+	}
+
+	public async requeueActiveJobs(): Promise<string[]> {
+		const requeuedIds: string[] = [];
+		const jobIds = await this.getAllJobFileIds();
+
+		for (const objectId of jobIds) {
+			await this.add('00_queued', objectId);
+			await this.add('all', objectId);
+			await this.removeJob(objectId); // delete job json file
+			requeuedIds.push(objectId);
+		}
+
+		return requeuedIds;
+	}
+
 	public async removeJob(objectId: string): Promise<void> {
 		const filePath = this.getJobFilePath(objectId);
 		if (await this.app.vault.adapter.exists(filePath)) {
