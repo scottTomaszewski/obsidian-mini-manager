@@ -174,12 +174,12 @@ export class MMFDownloader {
 	}
 
 	private async _processQueue(): Promise<void> {
-		this.logger.info(`_processQueue called. isPaused: ${this.isPaused}, isProcessing: ${this.isProcessing}`);
+		// this.logger.info(`_processQueue called. isPaused: ${this.isPaused}, isProcessing: ${this.isProcessing}`);
 		if (this.isPaused || this.isProcessing) {
 			return;
 		}
 		this.isProcessing = true;
-		this.logger.info(`_processQueue: set isProcessing to true.`);
+		// this.logger.info(`_processQueue: set isProcessing to true.`);
 
 		try {
 			// --- Heavy Task Pool (File Downloads) ---
@@ -247,7 +247,7 @@ export class MMFDownloader {
 				}
 		} finally {
 			this.isProcessing = false;
-			this.logger.info(`_processQueue: set isProcessing to false.`);
+			// this.logger.info(`_processQueue: set isProcessing to false.`);
 		}
 	}
 

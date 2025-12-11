@@ -78,12 +78,16 @@ export class ValidationModal extends Modal {
 
 		const promises = this.selectedResults.map(result => {
 			return (async () => {
+				this.plugin.logger.info(`Retrying model after failed validation: ${result.object.id}`)
+				await this.plugin.fileStateService.add('00_queued', String(result.object.id));
 				const adapter = this.app.vault.adapter;
 				// It's possible the folder might have been deleted by another retry
 				if (await adapter.exists(result.folderPath)) {
 					await adapter.rmdir(result.folderPath, true);
 				}
-				await this.plugin.downloader.downloadObject(String(result.object.id));
+				// await this.plugin.downloader.downloadObject(String(result.object.id));
+				// Kick off downloads
+				this.plugin.downloader.resumeDownloads();
 			})();
 		});
 
