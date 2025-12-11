@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.37
+
+- Better handling and performance of validation
+
 ## 0.0.36
 
 - Better handling of 403s
