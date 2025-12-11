@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.38
+
+- Adjusting how retries are handled
+
 ## 0.0.37
 
 - Better handling and performance of validation
