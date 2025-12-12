@@ -33,30 +33,32 @@ export class ValidationService {
         }
 
         const designerFolders = await adapter.list(downloadPath);
-        const validationPromises: Promise<ValidationResult>[] = [];
+        const validationPromises: Promise<ValidationResult | null>[] = [];
 
-        for (const designerFolder of designerFolders.folders) {
-            const objectFolders = await adapter.list(designerFolder);
+		for (const designerFolder of designerFolders.folders) {
+			const objectFolders = await adapter.list(designerFolder);
 
-            for (const objectFolder of objectFolders.folders) {
-                const metadataPath = `${objectFolder}/mmf-metadata.json`;
-                if (await adapter.exists(metadataPath)) {
-                    const validationPromise = (async () => {
-                        const metadataContent = await adapter.read(metadataPath);
-                        const object = JSON.parse(metadataContent) as MMFObject;
-                        const result = await this.validateObject(object, objectFolder);
-						await this.fileStateService.add('all', object.id);
-						if (result.isValid) {
-							await this.fileStateService.add('80_completed', object.id);
-						}
-						return result;
-                    })();
-                    validationPromises.push(validationPromise);
-                }
-            }
-        }
+			for (const objectFolder of objectFolders.folders) {
+				const metadataPath = `${objectFolder}/mmf-metadata.json`;
+				const validationPromise = (async () => {
+					if (!await adapter.exists(metadataPath)) {
+						return null;
+					}
+					const metadataContent = await adapter.read(metadataPath);
+					const object = JSON.parse(metadataContent) as MMFObject;
+					const result = await this.validateObject(object, objectFolder);
+					await this.fileStateService.add('all', object.id);
+					if (result.isValid) {
+						await this.fileStateService.add('80_completed', object.id);
+					}
+					return result;
+				})();
+				validationPromises.push(validationPromise);
+			}
+		}
 
-        return Promise.all(validationPromises);
+        const results = await Promise.all(validationPromises);
+		return results.filter((r): r is ValidationResult => r !== null);
     }
 
 	public async validateAndGetResult(objectId: string): Promise<ValidationResult | null> {

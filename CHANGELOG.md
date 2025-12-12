@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.41
+
+- Validation workers run concurrently
+
 ## 0.0.40
 
 - Validation on web worker
