@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.43
+
+- Allows configuration of max validation threads
+
 ## 0.0.42
 
 - Validation workers throttled to avoid performance issues
