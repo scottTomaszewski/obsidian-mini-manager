@@ -42,6 +42,10 @@ const context = await esbuild.context({
 	plugins: [
 		inlineWorkerPlugin(),
 	],
+	loader: {
+		'.worker.ts': 'ts',
+		'.worker.js': 'js',
+	},
 });
 
 if (prod) {

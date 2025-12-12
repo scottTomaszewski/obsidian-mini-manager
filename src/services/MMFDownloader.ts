@@ -9,6 +9,11 @@ import { OAuth2Service } from "./OAuth2Service";
 import { ValidationService } from "./ValidationService";
 import { FileStateService } from "./FileStateService";
 import { AuthenticationError, HttpError } from "../models/Errors";
+import createImageWorker from "../workers/image.worker";
+import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
+import createFileWorker from "../workers/file.worker";
+import type { FileWorkerRequest, FileWorkerResponse } from "../workers/fileWorkerTypes";
+import createZipWorker from "../workers/zip.worker";
 
 export class MMFDownloader {
 	private app: App;
@@ -871,37 +876,70 @@ export class MMFDownloader {
 	}
 
 	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
-		try {
-			const zip = await JSZip.loadAsync(zipData);
-			// new Notice(`Extracting ${Object.keys(zip.files).length} files...`);
+		const worker = createZipWorker();
 
-			for (const filename in zip.files) {
-				if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-				const file = zip.files[filename];
+		const run = (): Promise<void> => {
+			return new Promise((resolve, reject) => {
+				const abortListener = () => {
+					worker.terminate();
+					reject(new DOMException('Aborted', 'AbortError'));
+				};
 
-				if (!file.dir) {
-					const content = await file.async('arraybuffer');
-					const filePath = normalizePath(`${destinationPath}/${filename}`);
+				signal.addEventListener('abort', abortListener, { once: true });
 
-					// Ensure subdirectories exist
-					const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
-					if (parentDir && !await this.folderExists(parentDir)) {
-						await this.app.vault.createFolder(parentDir);
+				worker.onmessage = async (event: MessageEvent<{ entries: { filename: string; content: ArrayBuffer }[]; error?: string }>) => {
+					signal.removeEventListener('abort', abortListener);
+					worker.terminate();
+
+					if (event.data.error) {
+						reject(new Error(event.data.error));
+						return;
 					}
-					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
-					if (await this.fileExists(filePath)) {
-						this.logger.info(`File ${filePath} already exists, skipping extraction.`);
-						continue;
+					try {
+						for (const entry of event.data.entries) {
+							if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+							const filePath = normalizePath(`${destinationPath}/${entry.filename}`);
+							const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+							if (parentDir && !await this.folderExists(parentDir)) {
+								await this.app.vault.createFolder(parentDir);
+							}
+							if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+							if (await this.fileExists(filePath)) {
+								this.logger.info(`File ${filePath} already exists, skipping extraction.`);
+								continue;
+							}
+							await this.app.vault.createBinary(filePath, entry.content);
+						}
+						resolve();
+					} catch (err) {
+						reject(err);
 					}
-					await this.app.vault.createBinary(filePath, content);
+				};
+
+				worker.onerror = (err) => {
+					signal.removeEventListener('abort', abortListener);
+					worker.terminate();
+					reject(err);
+				};
+
+				try {
+					worker.postMessage({ zipData }, [zipData]);
+				} catch (err) {
+					signal.removeEventListener('abort', abortListener);
+					worker.terminate();
+					reject(err);
 				}
-			}
-			// new Notice('Extraction complete.');
+			});
+		};
+
+		try {
+			await run();
 		} catch (error) {
-			if (error.name === 'AbortError') throw error;
-			new Notice(`Failed to extract zip file: ${error.message}`);
-			this.logger.error(`Failed to extract zip file: ${error.message}`);
+			if ((error as any).name === 'AbortError') throw error;
+			new Notice(`Failed to extract zip file: ${(error as any).message}`);
+			this.logger.error(`Failed to extract zip file: ${(error as any).message}`);
 		}
 	}
 
