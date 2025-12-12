@@ -14,6 +14,7 @@ export interface MiniManagerSettings {
 	maxRetries: number;
 	maxConcurrentDownloads: number;
 	maxConcurrentLightTasks: number;
+	maxConcurrentValidations: number;
 }
 
 export const DEFAULT_SETTINGS: MiniManagerSettings = {
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: MiniManagerSettings = {
 	maxRetries: 2,
 	maxConcurrentDownloads: 3,
 	maxConcurrentLightTasks: 5,
+	maxConcurrentValidations: 4,
 };
 
 export class MiniManagerSettingsTab extends PluginSettingTab {
@@ -243,6 +245,19 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					this.plugin.settings.maxConcurrentLightTasks = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Max Concurrent Validations')
+			.setDesc('Number of models to validate at the same time (each runs in a worker).')
+			.addSlider(slider => slider
+				.setLimits(1, 24, 1)
+				.setValue(this.plugin.settings.maxConcurrentValidations)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.maxConcurrentValidations = value;
 					await this.plugin.saveSettings();
 				})
 			);

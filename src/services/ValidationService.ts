@@ -17,7 +17,6 @@ export class ValidationService {
     private app: App;
     private settings: MiniManagerSettings;
 	private fileStateService: FileStateService;
-	private readonly maxConcurrentValidations = 4;
 
     constructor(app: App, settings: MiniManagerSettings, fileStateService: FileStateService) {
         this.app = app;
@@ -57,7 +56,7 @@ export class ValidationService {
 			}
 		}
 
-        const results = await this.runWithConcurrency(validationTasks, this.maxConcurrentValidations);
+        const results = await this.runWithConcurrency(validationTasks, this.settings.maxConcurrentValidations);
 		return results.filter((r): r is ValidationResult => r !== null);
     }
 
