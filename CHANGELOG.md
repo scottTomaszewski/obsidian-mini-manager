@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.42
+
+- Validation workers throttled to avoid performance issues
+
 ## 0.0.41
 
 - Validation workers run concurrently

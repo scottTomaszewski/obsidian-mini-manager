@@ -1,7 +1,7 @@
 {
   "id": "mini-manager",
   "name": "Mini Manager",
-  "version": "0.0.41",
+  "version": "0.0.42",
   "minAppVersion": "0.15.0",
   "description": "Download and manage 3D models from MyMiniFactory",
   "author": "Scott Tomaszewski",
