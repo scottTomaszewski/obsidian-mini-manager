@@ -9,10 +9,6 @@ import { OAuth2Service } from "./OAuth2Service";
 import { ValidationService } from "./ValidationService";
 import { FileStateService } from "./FileStateService";
 import { AuthenticationError, HttpError } from "../models/Errors";
-import createImageWorker from "../workers/image.worker";
-import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
-import createImageWorker from "../workers/image.worker";
-import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
 
 export class MMFDownloader {
 	private app: App;
@@ -649,62 +645,11 @@ export class MMFDownloader {
 		return undefined;
 	}
 
-	private async fetchImagesWithWorker(jobs: ImageDownloadJob[], signal: AbortSignal): Promise<ImageWorkerResponse> {
-		return new Promise((resolve, reject) => {
-			let worker: Worker | null = null;
-			const cleanup = () => {
-				if (worker) {
-					worker.terminate();
-					worker = null;
-				}
-			};
-
-			if (signal.aborted) {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-				return;
-			}
-
-			try {
-				worker = createImageWorker();
-			} catch (error) {
-				reject(error);
-				return;
-			}
-
-			const abortListener = () => {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-			};
-
-			signal.addEventListener('abort', abortListener, { once: true });
-
-			worker.onmessage = (event: MessageEvent<ImageWorkerResponse>) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				resolve(event.data);
-			};
-
-			worker.onerror = (err) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(err);
-			};
-
-			try {
-				worker.postMessage({ jobs });
-			} catch (error) {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(error);
-			}
-		});
-	}
-
 
 	private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<string | undefined> {
 		this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
 
+		// Create images folder
 		const imagesPath = normalizePath(`${folderPath}/images`);
 		if (!await this.folderExists(imagesPath)) {
 			await this.app.vault.createFolder(imagesPath);
@@ -712,63 +657,41 @@ export class MMFDownloader {
 
 		let mainLocalImagePath: string | undefined;
 
-		const imageArray = object.images && object.images.length > 0
-			? (Array.isArray(object.images) ? object.images : [object.images])
-			: [];
+		// Check if images array exists and handle it
+		if (object.images && object.images.length > 0) {
+			// The API returns images as an array of complex objects
+			const imageArray = Array.isArray(object.images) ? object.images : [object.images];
 
-		if (imageArray.length === 0) {
-			this.logger.info(`No images array found for object ${object.id}`);
-		} else {
 			this.logger.info(`Found ${imageArray.length} images in the object`);
-			const jobs: ImageDownloadJob[] = [];
 
-			for (let i = 0; i < imageArray.length; i++) {
-				const imageUrl = this.getImageUrl(imageArray[i]);
-				if (!imageUrl) {
-					this.logger.warn(`Could not determine URL for image ${i + 1}`);
-					continue;
-				}
-				const filename = `image_${i + 1}${this.getFileExtensionFromUrl(imageUrl)}`;
-				jobs.push({ url: imageUrl, filename });
-			}
+			if (imageArray.length === 0) {
+				this.logger.info(`Empty images array for object ${object.id}`);
+			} else {
+				// Download each image
+				for (let i = 0; i < imageArray.length; i++) {
+					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+					const image = imageArray[i];
+					this.logger.info(`Processing image ${i + 1}/${imageArray.length}`);
+					this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / imageArray.length) * 10), `Downloading image ${i + 1}/${imageArray.length}`);
 
-			if (jobs.length > 0) {
-				try {
-					const workerResult = await this.fetchImagesWithWorker(jobs, signal);
-					let processed = 0;
-					for (const file of workerResult.files) {
-						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						const filePath = normalizePath(`${imagesPath}/${file.filename}`);
-						if (await this.fileExists(filePath)) {
-							this.logger.info(`Skipping download of image ${filePath}: already exists.`);
-						} else {
-							await this.app.vault.createBinary(filePath, file.data);
-						}
-						processed++;
-						this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round((processed / jobs.length) * 10), `Downloading image ${processed}/${jobs.length}`);
-						if (!mainLocalImagePath) {
-							mainLocalImagePath = filePath;
-						}
+					const imageUrl = this.getImageUrl(image);
+
+					if (!imageUrl) {
+						this.logger.warn(`Could not determine URL for image ${i + 1}`);
+						continue;
 					}
 
-					if (workerResult.errors.length > 0) {
-						workerResult.errors.forEach(err => this.logger.error(err));
-					}
-				} catch (error) {
-					this.logger.warn(`Image worker failed, falling back to main thread downloads: ${error instanceof Error ? error.message : error}`);
-					for (let i = 0; i < jobs.length; i++) {
-						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						const jobItem = jobs[i];
-						this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / jobs.length) * 10), `Downloading image ${i + 1}/${jobs.length}`);
-						const downloadedPath = await this.downloadSingleImage(jobItem.url, imagesPath, jobItem.filename.replace(/\.[^.]+$/, ''), signal);
-						if (downloadedPath && !mainLocalImagePath) {
-							mainLocalImagePath = downloadedPath;
-						}
+					const downloadedPath = await this.downloadSingleImage(imageUrl, imagesPath, `image_${i + 1}`, signal);
+					if (downloadedPath && !mainLocalImagePath) {
+						mainLocalImagePath = downloadedPath;
 					}
 				}
 			}
+		} else {
+			this.logger.info(`No images array found for object ${object.id}`);
 		}
 
+		// If we still have no images, create a placeholder
 		const files = await this.app.vault.adapter.list(imagesPath);
 		if (files && files.files.length === 0) {
 			this.logger.info("No images were downloaded, creating placeholder");
