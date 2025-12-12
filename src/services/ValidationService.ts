@@ -30,7 +30,7 @@ export class ValidationService {
 
         if (!await adapter.exists(downloadPath)) {
             return [];
-        }
+		}
 
         const designerFolders = await adapter.list(downloadPath);
         const validationTasks: Array<() => Promise<ValidationResult | null>> = [];
@@ -39,21 +39,12 @@ export class ValidationService {
 			const objectFolders = await adapter.list(designerFolder);
 
 			for (const objectFolder of objectFolders.folders) {
-				const metadataPath = `${objectFolder}/mmf-metadata.json`;
-				validationTasks.push(async () => {
-					if (!await adapter.exists(metadataPath)) {
-						return null;
-					}
-					const metadataContent = await adapter.read(metadataPath);
-					const object = JSON.parse(metadataContent) as MMFObject;
-					const result = await this.validateObject(object, objectFolder);
-					await this.fileStateService.add('all', object.id);
-					if (result.isValid) {
-						await this.fileStateService.add('80_completed', object.id);
-					}
-					return result;
-				});
+				validationTasks.push(this.createValidationTask(objectFolder, adapter));
 			}
+		}
+
+		if (validationTasks.length === 0) {
+			return [];
 		}
 
         const results = await this.runWithConcurrency(validationTasks, this.settings.maxConcurrentValidations);
@@ -232,6 +223,31 @@ export class ValidationService {
 				reject(error);
 			}
 		});
+	}
+
+	private createValidationTask(objectFolder: string, adapter: typeof this.app.vault.adapter): () => Promise<ValidationResult | null> {
+		return async () => {
+			const metadataPath = `${objectFolder}/mmf-metadata.json`;
+			if (!await adapter.exists(metadataPath)) {
+				return null;
+			}
+
+			let object: MMFObject;
+			try {
+				const metadataContent = await adapter.read(metadataPath);
+				object = JSON.parse(metadataContent) as MMFObject;
+			} catch (error) {
+				console.error(`Failed to load metadata for ${metadataPath}`, error);
+				return null;
+			}
+
+			const result = await this.validateObject(object, objectFolder);
+			await this.fileStateService.add('all', object.id);
+			if (result.isValid) {
+				await this.fileStateService.add('80_completed', object.id);
+			}
+			return result;
+		};
 	}
 
 	private shouldCheckHtml(filename: string): boolean {
