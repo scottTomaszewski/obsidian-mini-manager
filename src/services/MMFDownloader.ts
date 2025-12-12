@@ -11,8 +11,6 @@ import { FileStateService } from "./FileStateService";
 import { AuthenticationError, HttpError } from "../models/Errors";
 import createImageWorker from "../workers/image.worker";
 import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
-import createFileWorker from "../workers/file.worker";
-import type { FileWorkerRequest, FileWorkerResponse } from "../workers/fileWorkerTypes";
 import createImageWorker from "../workers/image.worker";
 import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
 
@@ -703,58 +701,6 @@ export class MMFDownloader {
 		});
 	}
 
-	private async fetchFileWithWorker(request: FileWorkerRequest, signal: AbortSignal): Promise<FileWorkerResponse> {
-		return new Promise((resolve, reject) => {
-			let worker: Worker | null = null;
-			const cleanup = () => {
-				if (worker) {
-					worker.terminate();
-					worker = null;
-				}
-			};
-
-			if (signal.aborted) {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-				return;
-			}
-
-			try {
-				worker = createFileWorker();
-			} catch (error) {
-				reject(error);
-				return;
-			}
-
-			const abortListener = () => {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-			};
-
-			signal.addEventListener('abort', abortListener, { once: true });
-
-			worker.onmessage = (event: MessageEvent<FileWorkerResponse>) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				resolve(event.data);
-			};
-
-			worker.onerror = (err) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(err);
-			};
-
-			try {
-				worker.postMessage(request);
-			} catch (error) {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(error);
-			}
-		});
-	}
-
 
 	private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<string | undefined> {
 		this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
@@ -907,151 +853,98 @@ export class MMFDownloader {
 		const totalFiles = object.files.items.length;
 		let downloadedFiles = 0;
 
-		const tasks: Array<() => Promise<void>> = [];
-
+		// Download each file
 		for (const item of object.files.items) {
-			tasks.push(async () => {
-				if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-				if (!item.download_url) {
-					this.logger.error(`No download URL for file: ${item.filename}`);
-					return;
-				}
+			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+			if (!item.download_url) {
+				this.logger.error(`No download URL for file: ${item.filename}`);
+				continue;
+			}
 
-				// Limit file size to 1.5GB to avoid ArrayBuffer allocation errors.
-				const maxFileSize = 1.5 * 1024 * 1024 * 1024;
-				if (item.size && item.size > maxFileSize) {
-					throw new Error(`File is too large for direct download (${this.formatFileSize(item.size)}). Please download it manually.`);
-				}
-
-				const filePath = normalizePath(`${filesPath}/${item.filename}`);
-				if (await this.fileExists(filePath)) {
-					this.logger.info(`Skipping download of file ${filePath}: already exists.`);
-					downloadedFiles++;
-					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles}/${totalFiles}`);
-					return;
-				}
-
-				const accessToken = await this.oauth2Service.getAccessToken();
-				const headers: Record<string, string> = {
-					'Cache-Control': 'no-cache',
-					'Pragma': 'no-cache',
-					'Expires': '0',
-				};
-
-				let url = item.download_url;
-				if (accessToken) {
-					url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
-				}
-
+			// Only attempt direct download if the setting is enabled
+			if (this.settings.useDirectDownload) {
 				try {
-					let response: FileWorkerResponse | null = null;
-
-					try {
-						response = await this.fetchFileWithWorker({ url, headers, filename: item.filename }, signal);
-					} catch (workerError) {
-						this.logger.warn(`File worker failed for ${item.filename}, falling back to main thread: ${workerError instanceof Error ? workerError.message : workerError}`);
+					// Limit file size to 1.5GB to avoid ArrayBuffer allocation errors.
+					const maxFileSize = 1.5 * 1024 * 1024 * 1024;
+					if (item.size && item.size > maxFileSize) {
+						throw new Error(`File is too large for direct download (${this.formatFileSize(item.size)}). Please download it manually.`);
 					}
 
-					if (!response || !response.success || !response.data) {
-						// Try main-thread download as a fallback
-						const fallbackResult = await this.downloadFileOnMain(url, headers, signal, item.filename);
-						response = {
-							filename: item.filename,
-							success: true,
-							status: 200,
-							contentType: fallbackResult.contentType,
-							data: fallbackResult.data,
-						};
+					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
+					const filePath = normalizePath(`${filesPath}/${item.filename}`);
+					if (await this.fileExists(filePath)) {
+						this.logger.info(`Skipping download of file ${filePath}: already exists.`);
+						downloadedFiles++;
+						continue;
 					}
 
-					if (response.status === 403 || (response.error && response.error.includes('403'))) {
+					const accessToken = await this.oauth2Service.getAccessToken();
+					const headers: Record<string, string> = {
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
+						'Expires': '0',
+					};
+
+					let url = item.download_url;
+					if (accessToken) {
+						url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
+					}
+
+					const response = await requestUrl({
+						url: url,
+						method: 'GET',
+						headers: headers,
+						signal: signal // Pass signal here
+					});
+
+					if (response.status === 403) {
 						this.pauseFileDownloads('Received 403 while downloading files. File downloads paused; resume after resolving authentication.');
+						// Move this job out of the downloading state immediately so the pool frees up
 						await this.fileStateService.move('70_downloading', 'failure_code_403', job.id);
 						await this.downloadManager.updateJob(job.id, 'failed', 100, 'Forbidden (403) during file download');
-						this.isProcessing = false;
-						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status || 403);
+						this.isProcessing = false; // allow queue to pick up others
+						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status);
 					}
 
-					if (!response.data) {
-						throw new Error(response.error || `Failed to download file: ${item.filename}`);
+					if (response.status !== 200) {
+						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
 					}
 
-					await this.app.vault.createBinary(filePath, response.data);
+					const contentType = response.headers['content-type'];
+					if (contentType && contentType.includes('text/html')) {
+						this.handleAuthError();
+						throw new Error('Invalid content type: received text/html. This may be a login redirect.');
+					}
+
+					const arrayBuffer = response.arrayBuffer;
+					await this.app.vault.createBinary(filePath, arrayBuffer);
+					// new Notice(`Successfully downloaded ${item.filename}`);
 
 					downloadedFiles++;
-					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles}/${totalFiles}`);
 
 					if (item.filename.toLowerCase().endsWith('.zip')) {
 						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+						// new Notice(`Extracting ${item.filename}...`);
 						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
 						try {
 							const zipData = await this.app.vault.adapter.readBinary(filePath);
-							await this.extractZipFile(zipData, filesPath, signal);
+							await this.extractZipFile(zipData, filesPath, signal); // Pass signal
 						} catch (zipError) {
 							if (zipError.name === 'AbortError') throw zipError;
 							this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
-							throw zipError;
+							throw zipError; // Re-throw to be caught by the outer catch
 						}
 					}
 				} catch (error) {
-					if ((error as any).name === 'AbortError') throw error;
-					new Notice(`Error downloading ${item.filename}: ${(error as any).message}`);
-					this.logger.error(`Error downloading file ${item.filename}: ${(error as any).message}`);
-					throw error;
+					if (error.name === 'AbortError') throw error;
+					new Notice(`Error downloading ${item.filename}: ${error.message}`);
+					this.logger.error(`Error downloading file ${item.filename}: ${error.message}`);
+					throw error; // Re-throw the error to be caught by the caller
 				}
-			});
-		}
-
-		await this.runWithConcurrency(tasks, Math.max(1, this.settings.maxConcurrentFileDownloads), signal);
-	}
-
-	private async runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number, signal: AbortSignal): Promise<T[]> {
-		const results: T[] = new Array(tasks.length);
-		let nextIndex = 0;
-
-		const worker = async () => {
-			while (true) {
-				if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-				const currentIndex = nextIndex++;
-				if (currentIndex >= tasks.length) break;
-				try {
-					results[currentIndex] = await tasks[currentIndex]();
-				} catch (error) {
-					// @ts-expect-error allow undefined/null; caller handles errors
-					results[currentIndex] = error;
-					throw error;
-				}
+			} else {
+				this.logger.info(`Skipping direct download for file ${item.filename}`);
 			}
-		};
-
-		const runners = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
-		await Promise.all(runners);
-		return results;
-	}
-
-	private async downloadFileOnMain(url: string, headers: Record<string, string>, signal: AbortSignal, filename: string): Promise<{ data: ArrayBuffer; contentType?: string }> {
-		const response = await requestUrl({
-			url,
-			method: 'GET',
-			headers,
-			signal
-		});
-
-		if (response.status === 403) {
-			throw new HttpError(`Forbidden downloading file: ${filename}`, response.status);
 		}
-
-		if (response.status !== 200) {
-			throw new Error(`Failed to download file: ${filename} (Status ${response.status})`);
-		}
-
-		const contentType = response.headers['content-type'];
-		if (contentType && contentType.includes('text/html')) {
-			this.handleAuthError();
-			throw new Error('Invalid content type: received text/html. This may be a login redirect.');
-		}
-
-		return { data: response.arrayBuffer, contentType };
 	}
 
 	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
