@@ -833,6 +833,8 @@ export class MMFDownloader {
 			}
 		}
 
+		await this.downloadManager.updateJob(job.id, '50_downloading_images', 60, 'Pending file downloads');
+
 		return mainLocalImagePath;
 	}
 
