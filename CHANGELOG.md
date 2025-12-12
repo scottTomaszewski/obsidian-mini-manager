@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.40
+
+- Validation on web worker
+
 ## 0.0.39
 
 - Helper command to requeue stuck jobs
