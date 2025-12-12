@@ -17,6 +17,7 @@ export class ValidationService {
     private app: App;
     private settings: MiniManagerSettings;
 	private fileStateService: FileStateService;
+	private readonly maxConcurrentValidations = 4;
 
     constructor(app: App, settings: MiniManagerSettings, fileStateService: FileStateService) {
         this.app = app;
@@ -33,14 +34,14 @@ export class ValidationService {
         }
 
         const designerFolders = await adapter.list(downloadPath);
-        const validationPromises: Promise<ValidationResult | null>[] = [];
+        const validationTasks: Array<() => Promise<ValidationResult | null>> = [];
 
 		for (const designerFolder of designerFolders.folders) {
 			const objectFolders = await adapter.list(designerFolder);
 
 			for (const objectFolder of objectFolders.folders) {
 				const metadataPath = `${objectFolder}/mmf-metadata.json`;
-				const validationPromise = (async () => {
+				validationTasks.push(async () => {
 					if (!await adapter.exists(metadataPath)) {
 						return null;
 					}
@@ -52,12 +53,11 @@ export class ValidationService {
 						await this.fileStateService.add('80_completed', object.id);
 					}
 					return result;
-				})();
-				validationPromises.push(validationPromise);
+				});
 			}
 		}
 
-        const results = await Promise.all(validationPromises);
+        const results = await this.runWithConcurrency(validationTasks, this.maxConcurrentValidations);
 		return results.filter((r): r is ValidationResult => r !== null);
     }
 
@@ -238,6 +238,29 @@ export class ValidationService {
 	private shouldCheckHtml(filename: string): boolean {
 		const lower = filename.toLowerCase();
 		return lower.endsWith('.zip') || lower.endsWith('.html');
+	}
+
+	private async runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<T[]> {
+		const results: T[] = new Array(tasks.length);
+		let nextIndex = 0;
+
+		const worker = async () => {
+			while (true) {
+				const currentIndex = nextIndex++;
+				if (currentIndex >= tasks.length) break;
+				try {
+					results[currentIndex] = await tasks[currentIndex]();
+				} catch (error) {
+					console.error('Validation task failed', error);
+					// @ts-expect-error allow holes/nulls; filtered by caller
+					results[currentIndex] = null;
+				}
+			}
+		};
+
+		const runners = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
+		await Promise.all(runners);
+		return results;
 	}
 
 	private async isHtmlFile(filePath: string): Promise<boolean> {
