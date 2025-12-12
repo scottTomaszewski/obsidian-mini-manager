@@ -2,6 +2,9 @@ import { App, Platform } from 'obsidian';
 import { MiniManagerSettings } from '../settings/MiniManagerSettings';
 import { MMFObject } from '../models/MMFObject';
 import { FileStateService } from './FileStateService';
+import createValidationWorker from '../workers/validation.worker';
+import { processValidationPayload } from '../workers/validationWorkerProcessor';
+import type { ValidationWorkerInput, ValidationWorkerOutput } from '../workers/validationWorkerTypes';
 
 export interface ValidationResult {
     object: MMFObject;
@@ -111,54 +114,15 @@ export class ValidationService {
     }
 
     private async validateObject(object: MMFObject, folderPath: string): Promise<ValidationResult> {
-        const errors: string[] = [];
-        const adapter = this.app.vault.adapter;
+		const payload = await this.buildValidationPayload(object, folderPath);
+		let errors: string[] = [];
 
-        // 1. Validate README frontmatter
-        const readmePath = `${folderPath}/README.md`;
-        if (await adapter.exists(readmePath)) {
-            // This is a simplified check. A more robust implementation would parse the frontmatter.
-            const readmeContent = await adapter.read(readmePath);
-            if (!readmeContent.startsWith('---') || !readmeContent.includes('---')) {
-                errors.push('README.md is missing frontmatter.');
-            }
-        } else {
-            errors.push('README.md is missing.');
-        }
-
-        // 2. Validate images
-        const imagesPath = `${folderPath}/images`;
-        if (this.settings.downloadImages && object.images && object.images.length > 0) {
-            if (await adapter.exists(imagesPath)) {
-                const downloadedImages = await adapter.list(imagesPath);
-                if (downloadedImages.files.length < object.images.length) {
-                    errors.push(`Missing images. Expected ${object.images.length}, found ${downloadedImages.files.length}.`);
-                }
-            } else {
-                errors.push('Images folder is missing.');
-            }
-        }
-
-        // 3. Validate files
-        const filesPath = `${folderPath}/files`;
-        if (this.settings.downloadFiles && object.files && object.files.items.length > 0) {
-            if (await adapter.exists(filesPath)) {
-                const downloadedFiles = await adapter.list(filesPath);
-                for (const item of object.files.items) {
-                    const expectedFilePath = `${filesPath}/${item.filename}`;
-                    if (!downloadedFiles.files.includes(expectedFilePath)) {
-                        errors.push(`Missing file: ${item.filename}`);
-                    } else if (item.filename.toLowerCase().endsWith('.zip') || item.filename.toLowerCase().endsWith('.html')) {
-                        // Check if a zip file is actually an HTML file
-                        if (await this.isHtmlFile(expectedFilePath)) {
-                            errors.push(`File ${item.filename} is HTML content, not a valid file (possible login redirect).`);
-                        }
-                    }
-                }
-            } else {
-                errors.push('Files folder is missing.');
-            }
-        }
+		try {
+			errors = await this.runValidationInWorker(payload);
+		} catch (error) {
+			console.error('Validation worker failed; running on main thread instead.', error);
+			errors = processValidationPayload(payload);
+		}
 
         return {
             object,
@@ -167,6 +131,112 @@ export class ValidationService {
             errors,
         };
     }
+
+	private async buildValidationPayload(object: MMFObject, folderPath: string): Promise<ValidationWorkerInput> {
+		const adapter = this.app.vault.adapter;
+
+		const readmePath = `${folderPath}/README.md`;
+		const readmeExists = await adapter.exists(readmePath);
+		const readmeContent = readmeExists ? await adapter.read(readmePath) : undefined;
+
+		const expectedImages = object.images?.length ?? 0;
+		const imagesEnabled = this.settings.downloadImages && expectedImages > 0;
+		const imagesPath = `${folderPath}/images`;
+		let imagesFound = 0;
+		let imagesFolderMissing = true;
+
+		if (imagesEnabled) {
+			imagesFolderMissing = !(await adapter.exists(imagesPath));
+			if (!imagesFolderMissing) {
+				const downloadedImages = await adapter.list(imagesPath);
+				imagesFound = downloadedImages.files.length;
+			}
+		}
+
+		const filesEnabled = this.settings.downloadFiles && !!(object.files && object.files.items.length > 0);
+		const filesPath = `${folderPath}/files`;
+		let filesFolderMissing = true;
+		const fileChecks: ValidationWorkerInput['files']['items'] = [];
+
+		if (filesEnabled) {
+			filesFolderMissing = !(await adapter.exists(filesPath));
+			const expectedItems = object.files?.items ?? [];
+
+			if (filesFolderMissing) {
+				for (const item of expectedItems) {
+					fileChecks.push({ filename: item.filename, exists: false, isHtml: false });
+				}
+			} else {
+				const downloadedFiles = await adapter.list(filesPath);
+				for (const item of expectedItems) {
+					const expectedFilePath = `${filesPath}/${item.filename}`;
+					const exists = downloadedFiles.files.includes(expectedFilePath);
+					const isHtml = exists && this.shouldCheckHtml(item.filename) ? await this.isHtmlFile(expectedFilePath) : false;
+					fileChecks.push({ filename: item.filename, exists, isHtml });
+				}
+			}
+		}
+
+		return {
+			object,
+			folderPath,
+			readme: {
+				exists: readmeExists,
+				content: readmeContent,
+			},
+			images: {
+				enabled: imagesEnabled,
+				expected: expectedImages,
+				found: imagesFound,
+				folderMissing: imagesFolderMissing,
+			},
+			files: {
+				enabled: filesEnabled,
+				folderMissing: filesFolderMissing,
+				items: fileChecks,
+			},
+		};
+	}
+
+	private async runValidationInWorker(payload: ValidationWorkerInput): Promise<string[]> {
+		if (typeof Worker === 'undefined') {
+			throw new Error('Workers are not supported in this environment.');
+		}
+
+		return new Promise((resolve, reject) => {
+			let worker: Worker | null = null;
+			const cleanup = () => {
+				if (worker) {
+					worker.terminate();
+					worker = null;
+				}
+			};
+
+			try {
+				worker = createValidationWorker();
+
+				worker.onmessage = (event: MessageEvent<ValidationWorkerOutput>) => {
+					cleanup();
+					resolve(event.data.errors);
+				};
+
+				worker.onerror = (err) => {
+					cleanup();
+					reject(err);
+				};
+
+				worker.postMessage(payload);
+			} catch (error) {
+				cleanup();
+				reject(error);
+			}
+		});
+	}
+
+	private shouldCheckHtml(filename: string): boolean {
+		const lower = filename.toLowerCase();
+		return lower.endsWith('.zip') || lower.endsWith('.html');
+	}
 
 	private async isHtmlFile(filePath: string): Promise<boolean> {
 		const adapter = this.app.vault.adapter;
@@ -191,7 +261,7 @@ export class ValidationService {
 						);
 					});
 					stream.on('error', (err) => {
-						this.app.console.error(`Error reading file for HTML check: ${filePath}`, err);
+						console.error(`Error reading file for HTML check: ${filePath}`, err);
 						resolve(false);
 					});
 				});
@@ -211,7 +281,7 @@ export class ValidationService {
 					trimmedContent == '';
 			}
 		} catch (error) {
-			this.app.console.error(`Error reading file for HTML check: ${filePath}`, error);
+			console.error(`Error reading file for HTML check: ${filePath}`, error);
 			return false;
 		}
 	}
