@@ -1,9 +1,9 @@
-import { App, Notice, TFile, TFolder, normalizePath, requestUrl } from 'obsidian';
-import { MMFObject } from '../../models/MMFObject';
-import { MiniManagerSettings } from '../../settings/MiniManagerSettings';
-import { DownloadJob, DownloadManager } from '../DownloadManager';
-import { LoggerService } from '../LoggerService';
-import type { ImageDownloadJob, ImageWorkerResponse } from '../../workers/imageWorkerTypes';
+import {App, Notice, TFile, TFolder, normalizePath, requestUrl} from 'obsidian';
+import {MMFObject} from '../../models/MMFObject';
+import {MiniManagerSettings} from '../../settings/MiniManagerSettings';
+import {DownloadJob, DownloadManager} from '../DownloadManager';
+import {LoggerService} from '../LoggerService';
+import type {ImageDownloadJob, ImageWorkerResponse} from '../../workers/imageWorkerTypes';
 
 export class ImageDownloadService {
 	private app: App;
@@ -53,41 +53,17 @@ export class ImageDownloadService {
 					continue;
 				}
 				const filename = `image_${i + 1}${this.getFileExtensionFromUrl(imageUrl)}`;
-				jobs.push({ url: imageUrl, filename });
+				jobs.push({url: imageUrl, filename});
 			}
 
 			if (jobs.length > 0) {
-				try {
-					const workerResult = await this.fetchImagesWithWorker(jobs, signal);
-					let processed = 0;
-					for (const file of workerResult.files) {
-						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						const filePath = normalizePath(`${imagesPath}/${file.filename}`);
-						if (await this.fileExists(filePath)) {
-							this.logger.info(`Skipping download of image ${filePath}: already exists.`);
-						} else {
-							await this.app.vault.createBinary(filePath, file.data);
-						}
-						processed++;
-						this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round((processed / jobs.length) * 10), `Downloading image ${processed}/${jobs.length}`);
-						if (!mainLocalImagePath) {
-							mainLocalImagePath = filePath;
-						}
-					}
-
-					if (workerResult.errors.length > 0) {
-						workerResult.errors.forEach(err => this.logger.error(err));
-					}
-				} catch (error) {
-					this.logger.warn(`Image worker failed, falling back to main thread downloads: ${error instanceof Error ? error.message : error}`);
-					for (let i = 0; i < jobs.length; i++) {
-						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						const jobItem = jobs[i];
-						this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / jobs.length) * 10), `Downloading image ${i + 1}/${jobs.length}`);
-						const downloadedPath = await this.downloadSingleImage(jobItem.url, imagesPath, jobItem.filename.replace(/\.[^.]+$/, ''), signal);
-						if (downloadedPath && !mainLocalImagePath) {
-							mainLocalImagePath = downloadedPath;
-						}
+				for (let i = 0; i < jobs.length; i++) {
+					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+					const jobItem = jobs[i];
+					this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / jobs.length) * 10), `Downloading image ${i + 1}/${jobs.length}`);
+					const downloadedPath = await this.downloadSingleImage(jobItem.url, imagesPath, jobItem.filename.replace(/\.[^.]+$/, ''), signal);
+					if (downloadedPath && !mainLocalImagePath) {
+						mainLocalImagePath = downloadedPath;
 					}
 				}
 			}
@@ -129,18 +105,22 @@ export class ImageDownloadService {
 				reject(new DOMException('Aborted', 'AbortError'));
 			};
 
-			signal.addEventListener('abort', abortListener, { once: true });
+			signal.addEventListener('abort', abortListener, {once: true});
 
 			try {
-				worker = new Worker(new URL('../../workers/image.worker.ts', import.meta.url), { type: 'module' });
+				worker = new Worker(new URL('../../workers/image.worker.ts', import.meta.url), {type: 'module'});
 			} catch (error) {
+				console.log("fallback 1")
+
 				try {
-					worker = new Worker(new URL('../../workers/image.worker.js', import.meta.url), { type: 'module' });
+					worker = new Worker(new URL('../../workers/image.worker.js', import.meta.url), {type: 'module'});
 				} catch (fallbackError) {
+					console.log("fallback 2")
 					signal.removeEventListener('abort', abortListener);
 					reject(fallbackError);
 					return;
 				}
+
 			}
 
 			worker.onmessage = (event: MessageEvent<ImageWorkerResponse>) => {
@@ -156,7 +136,7 @@ export class ImageDownloadService {
 			};
 
 			try {
-				worker.postMessage({ jobs });
+				worker.postMessage({jobs});
 			} catch (error) {
 				signal.removeEventListener('abort', abortListener);
 				cleanup();
