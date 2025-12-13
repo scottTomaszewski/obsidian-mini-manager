@@ -1,19 +1,15 @@
-import { App, Notice, TFile, TFolder, normalizePath, requestUrl, stringifyYaml } from "obsidian";
+import { App, Notice, TFile, TFolder, normalizePath, stringifyYaml } from "obsidian";
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { MMFApiService } from "./MMFApiService";
 import { MMFObject } from "../models/MMFObject";
-import * as JSZip from "jszip";
 import { DownloadManager, DownloadJob } from "./DownloadManager";
 import { LoggerService } from "./LoggerService";
 import { OAuth2Service } from "./OAuth2Service";
 import { ValidationService } from "./ValidationService";
 import { FileStateService } from "./FileStateService";
 import { AuthenticationError, HttpError } from "../models/Errors";
-import createImageWorker from "../workers/image.worker";
-import type { ImageDownloadJob, ImageWorkerResponse } from "../workers/imageWorkerTypes";
-import createFileWorker from "../workers/file.worker";
-import type { FileWorkerRequest, FileWorkerResponse } from "../workers/fileWorkerTypes";
-import createZipWorker from "../workers/zip.worker";
+import { ImageDownloadService } from "./downloads/ImageDownloadService";
+import { FileDownloadService } from "./downloads/FileDownloadService";
 
 export class MMFDownloader {
 	private app: App;
@@ -24,6 +20,8 @@ export class MMFDownloader {
 	private oauth2Service: OAuth2Service;
 	private validationService: ValidationService;
 	private fileStateService: FileStateService;
+	private imageDownloadService: ImageDownloadService;
+	private fileDownloadService: FileDownloadService;
 	private cancellationTokens: Map<string, AbortController> = new Map(); // For actual request cancellation
 	private isPaused: boolean = false;
 	private isProcessing: boolean = false;
@@ -39,6 +37,19 @@ export class MMFDownloader {
 		this.apiService = new MMFApiService(settings, logger, oauth2Service);
 		this.fileStateService = FileStateService.getInstance(this.app, this.logger);
 		this.downloadManager = DownloadManager.getInstance(this.fileStateService);
+		this.imageDownloadService = new ImageDownloadService(this.app, this.settings, this.logger, this.downloadManager, this.handleAuthError.bind(this));
+		this.fileDownloadService = new FileDownloadService(
+			this.app,
+			this.settings,
+			this.logger,
+			this.downloadManager,
+			this.oauth2Service,
+			this.fileStateService,
+			this.handleAuthError.bind(this),
+			this.pauseFileDownloads.bind(this),
+			this.formatFileSize.bind(this),
+			this.handleFileForbidden.bind(this)
+		);
 	}
 
 	public resumeDownloads(): void {
@@ -71,6 +82,12 @@ export class MMFDownloader {
 		const noticeMsg = message || 'File downloads paused after server error. Resume when ready.';
 		new Notice(noticeMsg);
 		this.logger.warn(noticeMsg);
+	}
+
+	private async handleFileForbidden(jobId: string): Promise<void> {
+		await this.fileStateService.move('70_downloading', 'failure_code_403', jobId);
+		await this.downloadManager.updateJob(jobId, 'failed', 100, 'Forbidden (403) during file download');
+		this.isProcessing = false;
 	}
 
 	private async yieldToEventLoop(): Promise<void> {
@@ -368,7 +385,7 @@ export class MMFDownloader {
 			const objectFolder = await this.createObjectFolder(job.object); // Re-create path, it's idempotent
 	
 			if (this.settings.downloadImages) {
-				await this.downloadImages(job, job.object, objectFolder, abortController.signal);
+				await this.imageDownloadService.downloadImages(job, job.object, objectFolder, abortController.signal);
 			}
 			
 			await this.fileStateService.move('50_downloading_images', '60_images_downloaded', objectId);
@@ -393,7 +410,7 @@ export class MMFDownloader {
 			const objectFolder = await this.createObjectFolder(job.object);
 	
 			if (this.settings.downloadFiles) {
-				await this.downloadFiles(job, job.object, objectFolder, abortController.signal);
+				await this.fileDownloadService.downloadFiles(job, job.object, objectFolder, abortController.signal);
 			}
 
 			// Create metadata files at the very end
@@ -587,362 +604,6 @@ export class MMFDownloader {
 		}
 	}
 
-	/**
-	 * Safely extract file extension from URL or provide a default
-	 */
-	private getFileExtensionFromUrl(url: string | undefined): string {
-		// Return default extension if URL is undefined
-		if (!url) {
-			this.logger.warn("Image URL is undefined, using default .jpg extension");
-			return ".jpg";
-		}
-
-		try {
-			// Try to extract extension from URL
-			const matches = url.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
-			if (matches && matches.length > 1) {
-				return `.${matches[1].toLowerCase()}`;
-			}
-
-			// For URLs without extensions or unexpected formats, use a default
-			this.logger.warn(`No file extension found in URL: ${url}, using default .jpg extension`);
-			return ".jpg";
-		} catch (error) {
-			this.logger.error(`Error extracting file extension from URL: ${url}, ${error.message}`);
-			return ".jpg";
-		}
-	}
-
-	/**
-	 * Extract image URL from MyMiniFactory image object based on API response structure
-	 */
-	private getImageUrl(image: any): string | undefined {
-		// If image is already a string URL, return it directly
-		if (typeof image === 'string' && image.startsWith('http')) {
-			return image;
-		}
-
-		// Make sure we have an object to work with
-		if (!image || typeof image !== 'object') {
-			return undefined;
-		}
-
-		// Handle the complex nested structure from the API
-		// Prefer larger image formats when available
-		if (image.large && image.large.url) {
-			return image.large.url;
-		} else if (image.standard && image.standard.url) {
-			return image.standard.url;
-		} else if (image.original && image.original.url) {
-			return image.original.url;
-		} else if (image.thumbnail && image.thumbnail.url) {
-			return image.thumbnail.url;
-		} else if (image.tiny && image.tiny.url) {
-			return image.tiny.url;
-		}
-
-		// Handle direct URL in url property
-		if (typeof image.url === 'string' && image.url.startsWith('http')) {
-			return image.url;
-		}
-
-		// No URL found
-		return undefined;
-	}
-
-
-	private async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<string | undefined> {
-		this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
-
-		// Create images folder
-		const imagesPath = normalizePath(`${folderPath}/images`);
-		if (!await this.folderExists(imagesPath)) {
-			await this.app.vault.createFolder(imagesPath);
-		}
-
-		let mainLocalImagePath: string | undefined;
-
-		// Check if images array exists and handle it
-		if (object.images && object.images.length > 0) {
-			// The API returns images as an array of complex objects
-			const imageArray = Array.isArray(object.images) ? object.images : [object.images];
-
-			this.logger.info(`Found ${imageArray.length} images in the object`);
-
-			if (imageArray.length === 0) {
-				this.logger.info(`Empty images array for object ${object.id}`);
-			} else {
-				// Download each image
-				for (let i = 0; i < imageArray.length; i++) {
-					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-					const image = imageArray[i];
-					this.logger.info(`Processing image ${i + 1}/${imageArray.length}`);
-					this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / imageArray.length) * 10), `Downloading image ${i + 1}/${imageArray.length}`);
-
-					const imageUrl = this.getImageUrl(image);
-
-					if (!imageUrl) {
-						this.logger.warn(`Could not determine URL for image ${i + 1}`);
-						continue;
-					}
-
-					const downloadedPath = await this.downloadSingleImage(imageUrl, imagesPath, `image_${i + 1}`, signal);
-					if (downloadedPath && !mainLocalImagePath) {
-						mainLocalImagePath = downloadedPath;
-					}
-				}
-			}
-		} else {
-			this.logger.info(`No images array found for object ${object.id}`);
-		}
-
-		// If we still have no images, create a placeholder
-		const files = await this.app.vault.adapter.list(imagesPath);
-		if (files && files.files.length === 0) {
-			this.logger.info("No images were downloaded, creating placeholder");
-			const placeholderPath = normalizePath(`${imagesPath}/no_images.md`);
-			const placeholderContent = `# No Images Available\n\nNo images could be downloaded for this object.\n\nPlease visit the original page to view images:\n${object.url}`;
-			if (!await this.fileExists(placeholderPath)) {
-				await this.app.vault.create(placeholderPath, placeholderContent);
-			}
-		}
-
-		await this.downloadManager.updateJob(job.id, '50_downloading_images', 60, 'Pending file downloads');
-
-		return mainLocalImagePath;
-	}
-
-	/**
-	 * Download a single image given its URL
-	 */
-	private async downloadSingleImage(url: string, folderPath: string, baseFileName: string, signal: AbortSignal): Promise<string | undefined> {
-		try {
-			const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
-			const filePath = normalizePath(`${folderPath}/${fileName}`);
-
-			if (await this.fileExists(filePath)) {
-				this.logger.info(`Skipping download of image ${filePath}: already exists.`);
-				return filePath;
-			}
-
-			// new Notice(`Downloading ${baseFileName}...`);
-			this.logger.info(`Downloading image from URL: ${url}`);
-
-			const response = await requestUrl({
-				url: url,
-				method: 'GET',
-				headers: {
-					'Cache-Control': 'no-cache',
-					'Pragma': 'no-cache',
-					'Expires': '0',
-				},
-				signal: signal // Pass signal here
-			});
-
-			if (response.status !== 200) {
-				throw new Error(`Failed to download image: ${response.status}`);
-			}
-
-			const contentType = response.headers['content-type'];
-			if (contentType && contentType.includes('text/html')) {
-				this.handleAuthError();
-				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
-			}
-
-			await this.app.vault.createBinary(filePath, response.arrayBuffer);
-			this.logger.info(`Successfully downloaded ${baseFileName}`);
-			return filePath;
-		} catch (error) {
-			if (error.name === 'AbortError') throw error; // Re-throw AbortError
-			new Notice(`Error downloading ${baseFileName}: ${error.message}`);
-			this.logger.error(`Error downloading image ${url}: ${error.message}`);
-
-			// Create a placeholder file with instructions if download fails
-			const placeholderPath = normalizePath(`${folderPath}/${baseFileName}_error.md`);
-			const placeholderContent = `# Download Error\n\nFailed to download image from: ${url}\n\nError: ${error.message}\n\nPlease visit the MyMiniFactory website to view this image.`;
-			if (!await this.fileExists(placeholderPath)) {
-				await this.app.vault.create(placeholderPath, placeholderContent);
-			}
-			throw error;
-		}
-	}
-
-	private async downloadFiles(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<void> {
-		// Create files folder
-		const filesPath = normalizePath(`${folderPath}/files`);
-		if (!await this.folderExists(filesPath)) {
-			await this.app.vault.createFolder(filesPath);
-		}
-
-		if (!object.files || !object.files.items) {
-			return;
-		}
-
-		const totalFiles = object.files.items.length;
-		let downloadedFiles = 0;
-
-		// Download each file
-		for (const item of object.files.items) {
-			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-			if (!item.download_url) {
-				this.logger.error(`No download URL for file: ${item.filename}`);
-				continue;
-			}
-
-			// Only attempt direct download if the setting is enabled
-			if (this.settings.useDirectDownload) {
-				try {
-					// Limit file size to 1.5GB to avoid ArrayBuffer allocation errors.
-					const maxFileSize = 1.5 * 1024 * 1024 * 1024;
-					if (item.size && item.size > maxFileSize) {
-						throw new Error(`File is too large for direct download (${this.formatFileSize(item.size)}). Please download it manually.`);
-					}
-
-					this.downloadManager.updateJob(job.id, 'downloading', 60 + Math.round((downloadedFiles / totalFiles) * 20), `Downloading file ${downloadedFiles + 1}/${totalFiles}`);
-					const filePath = normalizePath(`${filesPath}/${item.filename}`);
-					if (await this.fileExists(filePath)) {
-						this.logger.info(`Skipping download of file ${filePath}: already exists.`);
-						downloadedFiles++;
-						continue;
-					}
-
-					const accessToken = await this.oauth2Service.getAccessToken();
-					const headers: Record<string, string> = {
-						'Cache-Control': 'no-cache',
-						'Pragma': 'no-cache',
-						'Expires': '0',
-					};
-
-					let url = item.download_url;
-					if (accessToken) {
-						url += `${url.includes('?') ? '&' : '?'}access_token=${accessToken}`;
-					}
-
-					const response = await requestUrl({
-						url: url,
-						method: 'GET',
-						headers: headers,
-						signal: signal // Pass signal here
-					});
-
-					if (response.status === 403) {
-						this.pauseFileDownloads('Received 403 while downloading files. File downloads paused; resume after resolving authentication.');
-						// Move this job out of the downloading state immediately so the pool frees up
-						await this.fileStateService.move('70_downloading', 'failure_code_403', job.id);
-						await this.downloadManager.updateJob(job.id, 'failed', 100, 'Forbidden (403) during file download');
-						this.isProcessing = false; // allow queue to pick up others
-						throw new HttpError(`Forbidden downloading file: ${item.filename}`, response.status);
-					}
-
-					if (response.status !== 200) {
-						throw new Error(`Failed to download file: ${item.filename} (Status ${response.status})`);
-					}
-
-					const contentType = response.headers['content-type'];
-					if (contentType && contentType.includes('text/html')) {
-						this.handleAuthError();
-						throw new Error('Invalid content type: received text/html. This may be a login redirect.');
-					}
-
-					const arrayBuffer = response.arrayBuffer;
-					await this.app.vault.createBinary(filePath, arrayBuffer);
-					// new Notice(`Successfully downloaded ${item.filename}`);
-
-					downloadedFiles++;
-
-					if (item.filename.toLowerCase().endsWith('.zip')) {
-						if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-						// new Notice(`Extracting ${item.filename}...`);
-						this.downloadManager.updateJob(job.id, 'extracting', 80, `Extracting ${item.filename}`);
-						try {
-							const zipData = await this.app.vault.adapter.readBinary(filePath);
-							await this.extractZipFile(zipData, filesPath, signal); // Pass signal
-						} catch (zipError) {
-							if (zipError.name === 'AbortError') throw zipError;
-							this.logger.error(`Error extracting zip file ${item.filename}: ${zipError.message}`);
-							throw zipError; // Re-throw to be caught by the outer catch
-						}
-					}
-				} catch (error) {
-					if (error.name === 'AbortError') throw error;
-					new Notice(`Error downloading ${item.filename}: ${error.message}`);
-					this.logger.error(`Error downloading file ${item.filename}: ${error.message}`);
-					throw error; // Re-throw the error to be caught by the caller
-				}
-			} else {
-				this.logger.info(`Skipping direct download for file ${item.filename}`);
-			}
-		}
-	}
-
-	private async extractZipFile(zipData: ArrayBuffer, destinationPath: string, signal: AbortSignal): Promise<void> {
-		const worker = createZipWorker();
-
-		const run = (): Promise<void> => {
-			return new Promise((resolve, reject) => {
-				const abortListener = () => {
-					worker.terminate();
-					reject(new DOMException('Aborted', 'AbortError'));
-				};
-
-				signal.addEventListener('abort', abortListener, { once: true });
-
-				worker.onmessage = async (event: MessageEvent<{ entries: { filename: string; content: ArrayBuffer }[]; error?: string }>) => {
-					signal.removeEventListener('abort', abortListener);
-					worker.terminate();
-
-					if (event.data.error) {
-						reject(new Error(event.data.error));
-						return;
-					}
-
-					try {
-						for (const entry of event.data.entries) {
-							if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-							const filePath = normalizePath(`${destinationPath}/${entry.filename}`);
-							const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
-							if (parentDir && !await this.folderExists(parentDir)) {
-								await this.app.vault.createFolder(parentDir);
-							}
-							if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-							if (await this.fileExists(filePath)) {
-								this.logger.info(`File ${filePath} already exists, skipping extraction.`);
-								continue;
-							}
-							await this.app.vault.createBinary(filePath, entry.content);
-						}
-						resolve();
-					} catch (err) {
-						reject(err);
-					}
-				};
-
-				worker.onerror = (err) => {
-					signal.removeEventListener('abort', abortListener);
-					worker.terminate();
-					reject(err);
-				};
-
-				try {
-					worker.postMessage({ zipData }, [zipData]);
-				} catch (err) {
-					signal.removeEventListener('abort', abortListener);
-					worker.terminate();
-					reject(err);
-				}
-			});
-		};
-
-		try {
-			await run();
-		} catch (error) {
-			if ((error as any).name === 'AbortError') throw error;
-			new Notice(`Failed to extract zip file: ${(error as any).message}`);
-			this.logger.error(`Failed to extract zip file: ${(error as any).message}`);
-		}
-	}
-
 	private async saveMetadataFile(object: MMFObject, folderPath: string): Promise<void> {
 		const filePath = normalizePath(`${folderPath}/mmf-metadata.json`);
 		const file = this.app.vault.getAbstractFileByPath(filePath);
@@ -954,6 +615,22 @@ export class MMFDownloader {
 	}
 
 	// Helper methods
+	private getImageUrl(image: any): string | undefined {
+		if (typeof image === 'string' && image.startsWith('http')) {
+			return image;
+		}
+		if (!image || typeof image !== 'object') {
+			return undefined;
+		}
+		if (image.large && image.large.url) return image.large.url;
+		if (image.standard && image.standard.url) return image.standard.url;
+		if (image.original && image.original.url) return image.original.url;
+		if (image.thumbnail && image.thumbnail.url) return image.thumbnail.url;
+		if (image.tiny && image.tiny.url) return image.tiny.url;
+		if (typeof image.url === 'string' && image.url.startsWith('http')) return image.url;
+		return undefined;
+	}
+
 	private async folderExists(path: string): Promise<boolean> {
 		try {
 			const folder = this.app.vault.getAbstractFileByPath(path);
