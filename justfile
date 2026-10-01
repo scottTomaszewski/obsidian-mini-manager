@@ -1,3 +1,6 @@
+test:
+	npm test
+
 release version:
 	jq '.version = "{{version}}"' manifest.json > tmp && mv tmp manifest.json
 	jq '.version = "{{version}}"' package.json > tmp && mv tmp package.json

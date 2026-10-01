@@ -2,8 +2,8 @@ export interface OAuth2Token {
     access_token: string;
     expires_in: number;
     token_type: string;
-    scope: string;
-    refresh_token: string;
+    scope?: string;
+    refresh_token?: string;
     created_at: number; // a timestamp in seconds
 }
 

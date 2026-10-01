@@ -6,11 +6,12 @@ export interface MiniManagerSettings {
 	clientId: string;
 	clientSecret: string;
 	oauthToken: string;
+	/** The `state` sent with the login request in progress, checked against the redirect. */
+	oauthPendingState?: string;
 	downloadPath: string;
 	downloadImages: boolean;
 	downloadFiles: boolean;
 	useDirectDownload: boolean;
-	strictApiMode: boolean;
 	maxRetries: number;
 	maxConcurrentDownloads: number;
 	maxConcurrentLightTasks: number;
@@ -26,7 +27,6 @@ export const DEFAULT_SETTINGS: MiniManagerSettings = {
 	downloadImages: true,
 	downloadFiles: true,
 	useDirectDownload: false,
-	strictApiMode: false,
 	maxRetries: 2,
 	maxConcurrentDownloads: 3,
 	maxConcurrentLightTasks: 5,
@@ -103,14 +103,17 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 			.setDesc('Authenticate with your MyMiniFactory account to download paid objects.')
 			.addButton(button => button
 				.setButtonText('Login')
-				.onClick(() => {
+				.onClick(async () => {
 					const redirectUri = 'https://www.myminifactory.com/oauth/callback';
-					// const authUrl = `https://auth.myminifactory.com/web/authorize?client_id=${this.plugin.settings.clientId}&redirect_uri=${redirectUri}&response_type=code&state=obsidian`;
+					const state = `obsidian-mini-manager-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+					this.plugin.settings.oauthPendingState = state;
+					await this.plugin.saveSettings();
+
 					const url = new URL("https://auth.myminifactory.com/web/authorize");
 					url.searchParams.set("client_id", this.plugin.settings.clientId);
 					url.searchParams.set("redirect_uri", redirectUri);
 					url.searchParams.set("response_type", "token");
-					url.searchParams.set("state", "obsidian-mini-manager");
+					url.searchParams.set("state", state);
 
 					window.open(url.toString(), '_blank');
 				})
@@ -131,7 +134,7 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 						}
 
 						try {
-							// expectedState is optional; if you are not using state, just omit the second arg
+							// Stores the token and resumes downloads that were waiting on a login.
 							await this.plugin.oauth2Service.exchangeCodeForToken(
 								value,
 								this.plugin.settings.oauthPendingState
@@ -198,18 +201,7 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 			);
 			
 		new Setting(containerEl).setName('Advanced Settings').setHeading();
-		
-		new Setting(containerEl)
-			.setName('Strict API Mode')
-			.setDesc('If enabled, the plugin will fail when API errors occur. Disable to allow graceful fallbacks.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.strictApiMode)
-				.onChange(async (value) => {
-					this.plugin.settings.strictApiMode = value;
-					await this.plugin.saveSettings();
-				})
-			);
-			
+
 		new Setting(containerEl)
 			.setName('Max Retries')
 			.setDesc('Number of times to retry API requests on transient errors.')
@@ -269,8 +261,8 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Test Connection')
 				.onClick(async () => {
-					if (!this.plugin.settings.mmfApiKey) {
-						new Notice('Please enter an API key first');
+					if (!this.plugin.settings.mmfApiKey && !this.plugin.settings.oauthToken) {
+						new Notice('Please enter an API key or log in first');
 						return;
 					}
 					
@@ -279,9 +271,9 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 					try {
 						const isValid = await this.plugin.apiService.validateApiKey();
 						if (isValid) {
-							new Notice('✅ Connection successful! API key is valid.');
+							new Notice('✅ Connection successful! Your credentials are valid.');
 						} else {
-							new Notice('❌ Connection failed. Please check your API key.');
+							new Notice('❌ Connection failed. Please check your API key or log in again.');
 						}
 					} catch (error) {
 						new Notice(`❌ Connection test failed: ${error.message}`);

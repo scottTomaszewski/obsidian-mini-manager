@@ -78,3 +78,19 @@ The plugin adds the following commands (accessible via the command palette):
 ### Folder Structure
 
 Downloaded models are organized as follows:
+
+## Development
+
+```sh
+npm install
+npm run dev     # rebuild main.js on change
+npm test        # unit tests (jest, no network)
+npm run tsc     # type check
+```
+
+`demo-vault/` is an Obsidian vault with the plugin symlinked in from the repo root, for
+trying changes against the real MyMiniFactory API. Open the folder as a vault in Obsidian;
+see `demo-vault/Welcome.md`. Nothing downloaded into it is ever committed.
+
+Tests live in `test/unit` and run against an in-memory vault and a fake MyMiniFactory
+(`test/mocks`, `test/fakes`).

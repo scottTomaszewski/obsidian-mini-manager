@@ -1,7 +1,8 @@
 import type { ValidationWorkerInput, ValidationWorkerOutput } from './validationWorkerTypes';
 import { processValidationPayload } from './validationWorkerProcessor';
+import type { WorkerScope } from './workerScope';
 
-const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+const ctx = self as unknown as WorkerScope;
 
 ctx.addEventListener('message', (event: MessageEvent<ValidationWorkerInput>) => {
 	const payload = event.data;

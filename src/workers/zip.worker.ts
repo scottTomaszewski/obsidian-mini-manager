@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import type { WorkerScope } from './workerScope';
 
 interface ZipWorkerRequest {
 	zipData: ArrayBuffer;
@@ -14,7 +15,7 @@ interface ZipWorkerResponse {
 	error?: string;
 }
 
-const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+const ctx = self as unknown as WorkerScope;
 
 ctx.addEventListener('message', async (event: MessageEvent<ZipWorkerRequest>) => {
 	const { zipData } = event.data;

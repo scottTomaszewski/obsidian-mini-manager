@@ -10,19 +10,13 @@ export class MMFApiService {
     private settings: MiniManagerSettings;
     private logger: LoggerService;
     private oauth2Service: OAuth2Service;
-    
-    // Add debugging info to track API requests and responses
-    private debug = true; // Set to false in production
-    
-    // Maximum number of retries for transient errors
-    private maxRetries = 2;
-    
+
     constructor(settings: MiniManagerSettings, logger: LoggerService, oauth2Service: OAuth2Service) {
         this.settings = settings;
         this.logger = logger;
         this.oauth2Service = oauth2Service;
     }
-    
+
     /**
      * Makes an API request using Obsidian's requestUrl function to handle CORS issues
      * Includes retry logic with exponential backoff for transient errors
@@ -32,28 +26,22 @@ export class MMFApiService {
         const headers: Record<string, string> = {
             'accept': 'application/json'
         };
+        const maxRetries = this.settings.maxRetries;
 
-        if (this.settings.oauthToken) {
-            const accessToken = await this.oauth2Service.getAccessToken();
+        let accessToken: string | undefined;
+        if (this.oauth2Service.hasToken()) {
+            accessToken = await this.oauth2Service.getAccessToken();
             headers['Authorization'] = `Bearer ${accessToken}`;
             url = `${this.apiBaseUrl}${endpoint}`;
         } else {
             const separator = endpoint.includes('?') ? '&' : '?';
             url = `${this.apiBaseUrl}${endpoint}${separator}key=${this.settings.mmfApiKey}`;
         }
-        
-        this.logger.info(`Making API request to: ${url}`);
-        
+
+        // Log the endpoint, never the URL: the URL can carry the API key.
+        this.logger.info(`API request: ${method} ${endpoint} (attempt ${retries + 1}/${maxRetries + 1})`);
+
         try {
-            // Debug log the API request details
-            if (this.debug) {
-                this.logger.debug(`API Request:
-                    URL: ${url}
-                    Method: ${method}
-                    Attempt: ${retries + 1}/${this.maxRetries + 1}
-                `);
-            }
-            
             const response = await requestUrl({
                 url: url,
                 method: method,
@@ -61,12 +49,12 @@ export class MMFApiService {
                 contentType: 'application/json',
                 throw: false // Don't throw on non-200 responses, we'll handle them manually
             });
-            
+
             // Handle HTTP error status codes
             if (response.status < 200 || response.status >= 300) {
                 let errorMessage = "";
                 let retryable = false;
-                
+
                 // Try to add more details from the response if available
                 try {
                     if (response.json && response.json.error) {
@@ -84,11 +72,16 @@ export class MMFApiService {
 
                 switch (response.status) {
                     case 401:
+						if (accessToken) {
+							// The token looked valid locally but the server says otherwise.
+							await this.oauth2Service.invalidateToken(accessToken);
+						}
 						errorMessage = "Authentication failed: please check your API key or OAuth token" + errorMessage;
 						throw new AuthenticationError(errorMessage);
                     case 403:
-						errorMessage = "Access forbidden: your API key or OAuth token may not have the required permissions" + errorMessage;
-						throw new AuthenticationError(errorMessage);
+						// About this resource (private, not purchased), not about the login.
+						errorMessage = "Access forbidden: your account may not have access to this resource" + errorMessage;
+						break;
                     case 404:
                         errorMessage = `Resource not found: ${endpoint}` + errorMessage;
                         break;
@@ -106,19 +99,19 @@ export class MMFApiService {
                     default:
                         errorMessage = `API error: ${response.status}` + errorMessage;
                 }
-                
+
                 // Retry logic for retryable errors
-                if (retryable && retries < this.maxRetries) {
+                if (retryable && retries < maxRetries) {
                     const delay = Math.pow(2, retries) * 1000; // Exponential backoff
                     this.logger.warn(`Retryable error encountered, retrying in ${delay}ms...`);
-                    
+
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this.apiRequest(endpoint, method, retries + 1);
                 }
-                
+
                 throw new HttpError(errorMessage, response.status);
             }
-            
+
             return response.json;
         } catch (error) {
 			// If it's one of our custom errors, just re-throw it.
@@ -127,25 +120,25 @@ export class MMFApiService {
 			}
 
             // For network errors or other issues, also implement retry logic
-            if (retries < this.maxRetries && 
-                (error.message.includes('Failed to fetch') || 
-                 error.message.includes('NetworkError') || 
+            if (retries < maxRetries &&
+                (error.message.includes('Failed to fetch') ||
+                 error.message.includes('NetworkError') ||
                  error.message.includes('network') ||
                  error.message.includes('timeout'))) {
-                
+
                 const delay = Math.pow(2, retries) * 1000; // Exponential backoff
                 this.logger.warn(`Network error encountered, retrying in ${delay}ms...`);
                 this.logger.error(`Attempt ${retries + 1} failed: ${error.message}`);
-                
+
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return this.apiRequest(endpoint, method, retries + 1);
             }
-            
+
             this.logger.error(`API request failed after ${retries + 1} attempts: ${error.message}`);
             throw new ApiError(`API request failed: ${error.message}`);
         }
     }
-    
+
     /**
      * Generate a web URL for a MyMiniFactory object
      */
@@ -157,24 +150,7 @@ export class MMFApiService {
             return `https://www.myminifactory.com/object/${objectId}`;
         }
     }
-    
-    /**
-     * Create a fallback object with minimal information when API fails
-     */
-    private createFallbackObject(objectId: string): MMFObject {
-        return {
-            id: objectId,
-            name: `Object ${objectId}`,
-            description: "Unable to retrieve object details from the API",
-            url: this.getObjectWebUrl(objectId),
-            images: [],
-            files: {
-                total_count: 0,
-                items: [],
-            }
-        };
-    }
-    
+
     async searchObjects(query: string, page: number = 1, perPage: number = 10): Promise<MMFObject[]> {
         try {
             const data = await this.apiRequest(`/objects?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}`);
@@ -184,27 +160,17 @@ export class MMFApiService {
             throw new Error(`Failed to search objects: ${error.message}`);
         }
     }
-    
+
+    /**
+     * Fetches an object's metadata. Rejects with an AuthenticationError, an HttpError
+     * carrying the status, or an ApiError; it never makes an object up.
+     */
     async getObjectById(objectId: string): Promise<MMFObject> {
         try {
             return await this.apiRequest(`/objects/${objectId}`);
         } catch (error) {
 			this.logger.error(`Error getting object ${objectId}: ${error.message}`);
-
-			// Always throw for authentication/authorization errors
-			if (error.message.includes("Authentication failed") || error.message.includes("Access forbidden")) {
-				throw error;
-			}
-			
-			// For other errors, respect strictApiMode
-			if (this.settings.strictApiMode) {
-				throw new Error(`Failed to get object details: ${error.message}`);
-			}
-			
-			// Otherwise, return a fallback object
-			const fallbackObject = this.createFallbackObject(objectId);
-			this.logger.warn(`Returning fallback object for ID ${objectId} due to API error`);
-			return fallbackObject;
+			throw error;
         }
     }
 
@@ -216,7 +182,7 @@ export class MMFApiService {
             this.logger.warn("API Key and OAuth Token are both missing. Cannot validate API connection.");
             return false;
         }
-        
+
         try {
             // Make a simple request to validate the API key
             // If oauthToken is available, it will be used by apiRequest

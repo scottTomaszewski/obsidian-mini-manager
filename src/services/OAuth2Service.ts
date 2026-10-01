@@ -1,15 +1,21 @@
 import { MiniManagerSettings } from "../settings/MiniManagerSettings";
 import { OAuth2Token, isTokenExpired } from "../models/OAuth2Model";
+import { AuthenticationError } from "../models/Errors";
 import { LoggerService } from "./LoggerService";
 
 export class OAuth2Service {
 	private settings: MiniManagerSettings;
 	private token: OAuth2Token | null = null;
 	private logger: LoggerService;
+	private persistSettings: () => Promise<void>;
 
-	constructor(settings: MiniManagerSettings, logger: LoggerService) {
+	/** Called after the user has successfully logged in. */
+	public onAuthenticated?: () => void;
+
+	constructor(settings: MiniManagerSettings, logger: LoggerService, persistSettings: () => Promise<void>) {
 		this.settings = settings;
 		this.logger = logger;
+		this.persistSettings = persistSettings;
 
 		if (settings.oauthToken) {
 			try {
@@ -22,8 +28,18 @@ export class OAuth2Service {
 		}
 	}
 
+	/** Whether a token is stored at all, valid or not. */
+	hasToken(): boolean {
+		return this.token !== null;
+	}
+
+	/** Whether there is a token that has not expired. The server may still reject it. */
+	isAuthenticated(): boolean {
+		return this.token !== null && !isTokenExpired(this.token);
+	}
+
 	/**
-	 * Returns a valid access token or throws if none is available.
+	 * Returns a valid access token or throws an AuthenticationError if none is available.
 	 * Caller should catch and trigger "reconnect to MyMiniFactory" UI.
 	 */
 	async getAccessToken(): Promise<string> {
@@ -32,7 +48,7 @@ export class OAuth2Service {
 		}
 
 		this.logger.warn("No valid MMF access token. User needs to re-authenticate.");
-		throw new Error("MyMiniFactory access token missing or expired. Please reconnect in the plugin settings.");
+		throw new AuthenticationError("MyMiniFactory access token missing or expired. Please reconnect in the plugin settings.");
 	}
 
 	/**
@@ -71,56 +87,34 @@ export class OAuth2Service {
 
 			const tokenType = params.get("token_type") || "Bearer";
 
-			// Adapt this to your OAuth2Token interface
-			const tokenData: OAuth2Token = {
+			// MMF implicit flow does not return a refresh_token; when the token expires the
+			// user has to log in again.
+			this.token = {
 				access_token: accessToken,
 				token_type: tokenType,
 				expires_in: expiresIn,
-				// MMF implicit flow usually does not return a refresh_token
-				// so we simply do not set it.
 				created_at: Math.floor(Date.now() / 1000),
 			};
-
-			this.token = tokenData;
-			await this.saveToken();
+			this.settings.oauthToken = JSON.stringify(this.token);
+			await this.persistSettings();
 
 			this.logger.info("Successfully stored MyMiniFactory access token from redirect URL");
 		} catch (error: any) {
 			this.logger.error(`Error parsing MMF redirect URL: ${error.message}`);
 			throw new Error(`Failed to extract access token from redirect URL: ${error.message}`);
 		}
+
+		this.onAuthenticated?.();
 	}
 
 	/**
-	 * Left here only so existing callers do not silently do something wrong.
-	 * Do not use client_credentials with MMF from a public Obsidian plugin.
+	 * Forgets a token the server rejected. Does nothing if that is no longer the stored
+	 * token: a request sent before the user logged in again can be rejected after.
 	 */
-	private async getNewToken(): Promise<void> {
-		throw new Error(
-			"getNewToken (client_credentials) is not supported for MyMiniFactory. " +
-			"Use the implicit flow and exchangeCodeForToken(redirectUrl) instead."
-		);
-	}
-
-	/**
-	 * MMF implicit flow does not provide a refresh_token in typical examples.
-	 * When the token expires, you should ask the user to re-auth via the browser.
-	 */
-	private async refreshToken(): Promise<void> {
-		throw new Error(
-			"refreshToken is not supported for MyMiniFactory implicit flow. " +
-			"Ask the user to reconnect when the token expires."
-		);
-	}
-
-	private async saveToken(): Promise<void> {
-		if (this.token) {
-			this.settings.oauthToken = JSON.stringify(this.token);
-		}
-	}
-
-	clearToken(): void {
+	async invalidateToken(rejectedAccessToken: string): Promise<void> {
+		if (this.token?.access_token !== rejectedAccessToken) return;
 		this.token = null;
 		this.settings.oauthToken = "";
+		await this.persistSettings();
 	}
 }

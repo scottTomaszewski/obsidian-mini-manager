@@ -12,7 +12,7 @@ import { SearchService } from '../services/SearchService';
 import { LoggerService } from '../services/LoggerService';
 import { OAuth2Service } from '../services/OAuth2Service';
 import {ValidationService} from "../services/ValidationService";
-import { FileStateService } from '../services/FileStateService';
+import { ACTIVE_STATES, FileStateService } from '../services/FileStateService';
 import { DownloadManager } from '../services/DownloadManager';
 import { ValidationModal } from '../ui/ValidationModal';
 
@@ -28,31 +28,49 @@ export default class MiniManagerPlugin extends Plugin {
 	validationService: ValidationService;
 
 	async onload() {
-		console.log('Loading Mini Manager plugin');
-
 		// Initialize services
-		this.logger = LoggerService.getInstance(this.app);
+		// Where state has always been kept, whatever folder the plugin was installed into.
+		const pluginDir = normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
+		this.logger = new LoggerService(this.app, pluginDir);
 		await this.loadSettings();
 		
 		// Initialize state and download management services
-		this.fileStateService = FileStateService.getInstance(this.app, this.logger);
+		this.fileStateService = new FileStateService(this.app, this.logger, pluginDir);
 		await this.fileStateService.init();
-		this.downloadManager = DownloadManager.getInstance(this.fileStateService);
+		this.downloadManager = new DownloadManager(this.fileStateService);
+		await this.downloadManager.init();
 
 		// Initialize services that depend on settings
-		this.oauth2Service = new OAuth2Service(this.settings, this.logger);
+		this.oauth2Service = new OAuth2Service(this.settings, this.logger, () => this.saveSettings());
 		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
 		this.validationService = new ValidationService(this.app, this.settings, this.fileStateService);
 
-		this.downloader = new MMFDownloader(this.app, this.settings, this.logger, this.oauth2Service, this.validationService);
+		this.downloader = new MMFDownloader(
+			this.app,
+			this.settings,
+			this.logger,
+			this.oauth2Service,
+			this.apiService,
+			this.validationService,
+			this.fileStateService,
+			this.downloadManager,
+			pluginDir
+		);
 		this.searchService = new SearchService(this.app, this.settings);
+
+		// Logging in again retries whatever failed on authentication.
+		this.oauth2Service.onAuthenticated = () => {
+			this.downloader.resumeDownloads().catch(error => {
+				this.logger.error(`Failed to resume downloads after login: ${error.message}`);
+			});
+		};
 
 		// Add recovery and resume logic
 		await this.recoverOrphanedJobs();
 		await this.resumeInterruptedDownloads();
 
 		// Check if API key is set and show a notice if it's not
-		if (!this.settings.mmfApiKey) {
+		if (!this.settings.mmfApiKey && !this.settings.oauthToken) {
 			new Notice('Please set your MyMiniFactory API key in the settings.', 10000);
 		}
 
@@ -78,6 +96,15 @@ export default class MiniManagerPlugin extends Plugin {
 			name: 'Resume Downloads',
 			callback: () => {
 				this.downloader.resumeDownloads();
+			}
+		});
+
+		this.addCommand({
+			id: 'retry-failed-downloads',
+			name: 'Retry failed downloads',
+			callback: async () => {
+				const retried = await this.downloader.retryFailed();
+				new Notice(`Retrying ${retried} failed model${retried === 1 ? '' : 's'}.`, 5000);
 			}
 		});
 
@@ -119,68 +146,40 @@ export default class MiniManagerPlugin extends Plugin {
 		});
 
 		// Start processing the queue automatically on load
-		this.downloader.resumeDownloads();
+		this.downloader.start();
 	}
 
+	/** Queues jobs that have a job file but, after a crash, no state to say where they are. */
 	async recoverOrphanedJobs() {
 		this.logger.info("Checking for orphaned jobs...");
-		const jobAdapter = this.app.vault.adapter;
-		const jobsDir = normalizePath(`${this.app.vault.configDir}/plugins/mini-manager/jobs`);
-
-		if (!await jobAdapter.exists(jobsDir)) {
-			return;
-		}
-
-		const allJobFiles = await jobAdapter.list(jobsDir);
-		const allKnownStateIds = await this.fileStateService.getAllJobIds();
-		const knownIdSet = new Set(allKnownStateIds);
-
-		for (const jobFile of allJobFiles.files) {
-			const objectId = jobFile.split('/').pop()?.replace('.json', '');
-			if (objectId && !knownIdSet.has(objectId)) {
-				// This is an orphan
-				this.logger.warn(`Found orphaned job: ${objectId}. Re-queueing.`);
-				
-                const job = await this.downloadManager.getJob(objectId);
-                if (job && job.status !== '80_completed' && job.status !== 'failed' && job.status !== 'cancelled') {
-				    await this.fileStateService.add('00_queued', objectId);
-                    await this.downloadManager.updateJob(objectId, '00_queued', 0, 'Re-queued after crash');
-                } else if (!job) {
-                    // Job file exists but couldn't be loaded or is not in a terminal state.
-                    await this.fileStateService.add('00_queued', objectId);
-                }
+		for (const job of this.downloadManager.getJobs()) {
+			const finished = job.status === '80_completed' || job.status === 'failed' || job.status === 'cancelled';
+			if (this.fileStateService.getState(job.id) === undefined && !finished) {
+				this.logger.warn(`Found orphaned job: ${job.id}. Re-queueing.`);
+				await this.fileStateService.add('00_queued', job.id);
+				await this.downloadManager.updateJob(job.id, '00_queued', 0, 'Re-queued after crash');
 			}
 		}
 	}
 
 	async resumeInterruptedDownloads() {
 		this.logger.info("Checking for interrupted downloads...");
-		// Include all non-terminal states so we re-queue anything that was mid-flight
-		const transientStates = [
-			'10_validating',
-			'20_validated',
-			'30_preparing',
-			'40_prepared',
-			'50_downloading_images',
-			'60_images_downloaded',
-			'70_downloading'
-		];
+		// Anything that was mid-flight goes back to the start of the queue.
+		const transientStates = ACTIVE_STATES.filter(state => state !== '00_queued');
 
 		for (const state of transientStates) {
 			const ids = await this.fileStateService.getAll(state);
 			for (const id of ids) {
 				this.logger.info(`Download for ${id} was interrupted in ${state} state. Re-queueing.`);
 				await this.fileStateService.move(state, '00_queued', id);
-				const job = await this.downloadManager.getJob(id);
-				if (job) {
-					await this.downloadManager.updateJob(id, '00_queued', 0, 'Re-queued after interruption');
-				}
+				await this.downloadManager.updateJob(id, '00_queued', 0, 'Re-queued after interruption');
 			}
 		}
 	}
 
 	onunload() {
-		// Clean up resources if needed
+		this.downloader?.shutdown();
+		this.fileStateService?.close();
 	}
 
 	async loadSettings() {

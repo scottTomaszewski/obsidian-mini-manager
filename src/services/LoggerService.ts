@@ -8,20 +8,12 @@ export enum LogLevel {
 }
 
 export class LoggerService {
-    private static instance: LoggerService;
     private app: App;
     private logFilePath: string;
 
-    private constructor(app: App) {
+    constructor(app: App, pluginDir: string) {
         this.app = app;
-        this.logFilePath = normalizePath(`${this.app.vault.configDir}/plugins/mini-manager/debug.log`);
-    }
-
-    public static getInstance(app: App): LoggerService {
-        if (!LoggerService.instance) {
-            LoggerService.instance = new LoggerService(app);
-        }
-        return LoggerService.instance;
+        this.logFilePath = normalizePath(`${pluginDir}/debug.log`);
     }
 
     private async writeLog(level: LogLevel, message: string) {

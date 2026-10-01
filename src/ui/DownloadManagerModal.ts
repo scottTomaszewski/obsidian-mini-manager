@@ -1,5 +1,6 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
 import { DownloadManager, DownloadJob } from '../services/DownloadManager';
+import { isFailureState } from '../services/FileStateService';
 import MiniManagerPlugin from '../core/MiniManagerPlugin';
 import { ValidationService } from '../services/ValidationService';
 import { ValidationModal } from './ValidationModal';
@@ -17,12 +18,13 @@ export class DownloadManagerModal extends Modal {
     private objectId: string = "";
     private clearCompletedButton?: HTMLButtonElement;
     private clearFailedButton?: HTMLButtonElement;
+    private retryFailedButton?: HTMLButtonElement;
     private downloadButton?: HTMLButtonElement;
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
         this.plugin = plugin;
-        this.downloadManager = DownloadManager.getInstance();
+        this.downloadManager = plugin.downloadManager;
     }
 
     onOpen() {
@@ -53,7 +55,7 @@ export class DownloadManagerModal extends Modal {
             event.preventDefault();
             contentEl.removeClass('drag-over');
 
-            const text = event.dataTransfer.getData('text/plain');
+            const text = event.dataTransfer?.getData('text/plain') ?? '';
             this.handleDrop(text);
         });
 
@@ -98,6 +100,17 @@ export class DownloadManagerModal extends Modal {
                     .setDisabled(failedCount === 0)
                     .onClick(() => {
                         this.downloadManager.clearFailed();
+                    });
+            })
+            .addButton(button => {
+                const failedCount = this.downloadManager.getFailedJobsCount();
+                this.retryFailedButton = button.buttonEl;
+                button
+                    .setButtonText(`Retry Failed (${failedCount})`)
+                    .setDisabled(failedCount === 0)
+                    .onClick(async () => {
+                        const retried = await this.plugin.downloader.retryFailed();
+                        new Notice(`Retrying ${retried} failed model${retried === 1 ? '' : 's'}.`);
                     });
             })
             .addButton(button => button
@@ -145,6 +158,12 @@ export class DownloadManagerModal extends Modal {
             this.clearFailedButton.textContent = `Clear Failed (${failedCount})`;
             this.clearFailedButton.disabled = failedCount === 0;
         }
+
+        if (this.retryFailedButton) {
+            const failedCount = this.downloadManager.getFailedJobsCount();
+            this.retryFailedButton.textContent = `Retry Failed (${failedCount})`;
+            this.retryFailedButton.disabled = failedCount === 0;
+        }
     }
 
     private handleDrop(text: string) {
@@ -168,6 +187,10 @@ export class DownloadManagerModal extends Modal {
             return;
         }
 
+        if (this.plugin.downloader.isPausedState()) {
+            new Notice('Downloads are paused. Queued models start when they resume.');
+        }
+
         for (const id of ids) {
             new Notice(`Queuing object ${id} for download...`);
             this.plugin.downloader.downloadObject(id).catch(error => {
@@ -178,7 +201,6 @@ export class DownloadManagerModal extends Modal {
     }
 
     private retryDownload(jobId: string) {
-        this.downloadManager.removeJob(jobId);
         this.plugin.downloader.downloadObject(jobId).catch(error => {
             new Notice(`Error queuing object ${jobId}: ${error.message}`);
             console.error(`Error queuing object ${jobId}:`, error);
@@ -339,7 +361,7 @@ export class DownloadManagerModal extends Modal {
 
         const queued = get('queued');
         const completed = get('completed');
-        const failed = get('failed') + get('failure_auth') + get('failure_unknown');
+        const failed = Object.keys(counts).filter(isFailureState).reduce((total, key) => total + counts[key], 0);
         const cancelled = get('cancelled');
 
         return {

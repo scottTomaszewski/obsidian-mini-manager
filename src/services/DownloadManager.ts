@@ -11,33 +11,26 @@ export interface DownloadJob {
 }
 
 export class DownloadManager {
-	private static instance: DownloadManager;
 	private fileStateService: FileStateService;
 	private jobs: Map<string, DownloadJob> = new Map();
 	private listeners: ((jobs: DownloadJob[]) => void)[] = [];
 	private readonly yieldDelayMs = 0;
 
-	private constructor(fileStateService: FileStateService) {
+	constructor(fileStateService: FileStateService) {
 		this.fileStateService = fileStateService;
-		this.loadAllJobs();
 	}
 
-	public static getInstance(fileStateService?: FileStateService): DownloadManager {
-		if (!DownloadManager.instance) {
-			if (!fileStateService) {
-				throw new Error("FileStateService must be provided on first instantiation of DownloadManager.");
-			}
-			DownloadManager.instance = new DownloadManager(fileStateService);
-		}
-		return DownloadManager.instance;
-	}
-
-	private async loadAllJobs() {
-		const ids = await this.fileStateService.getAllJobIds();
-		for (const id of ids) {
-			const job = await this.fileStateService.getJob(id);
-			if (job) {
-				this.jobs.set(id, job);
+	/** Loads the jobs persisted by earlier sessions. */
+	public async init(): Promise<void> {
+		const ids = await this.fileStateService.getAllJobFileIds();
+		// Read in batches: a large library has a job file per object and this runs on startup.
+		const batchSize = 50;
+		for (let i = 0; i < ids.length; i += batchSize) {
+			const jobs = await Promise.all(ids.slice(i, i + batchSize).map(id => this.fileStateService.getJob(id)));
+			for (const job of jobs) {
+				if (job) {
+					this.jobs.set(job.id, job);
+				}
 			}
 		}
 		this.notifyListeners();
@@ -58,10 +51,7 @@ export class DownloadManager {
 	}
 
 	public async updateJob(id: string, status: DownloadJob['status'], progress: number, progressMessage: string, error?: string) {
-		let job = this.jobs.get(id);
-		if (!job) {
-			job = await this.fileStateService.getJob(id);
-		}
+		const job = this.jobs.get(id) ?? await this.fileStateService.getJob(id);
 
 		if (job) {
 			job.status = status;
@@ -96,23 +86,19 @@ export class DownloadManager {
 		return Array.from(this.jobs.values()).sort((a, b) => (a.object.name || '').localeCompare(b.object.name || ''));
 	}
 
+	/** Drops the job record. The object stays in whatever state it is in. */
+	public async forgetJob(id: string) {
+		this.jobs.delete(id);
+		await this.fileStateService.removeJob(id);
+		this.notifyListeners();
+	}
+
+	/** Drops the job record and takes the object out of the pipeline. */
 	public async removeJob(id: string) {
 		// Just in case, make sure we dont lose it
 		await this.fileStateService.add('all', id);
-
-		if (this.jobs.has(id)) {
-			this.jobs.delete(id);
-		}
-		await this.fileStateService.removeJob(id);
-		// also remove from any state files
-		await this.fileStateService.remove('00_queued', id);
-		await this.fileStateService.remove('70_downloading', id);
-		await this.fileStateService.remove('80_completed', id);
-		await this.fileStateService.remove('failed', id);
-		await this.fileStateService.remove('cancelled', id);
-		await this.fileStateService.remove('10_validating', id);
-
-		this.notifyListeners();
+		await this.fileStateService.clearState([id]);
+		await this.forgetJob(id);
 	}
 
 	public async clearCompleted() {
@@ -142,20 +128,26 @@ export class DownloadManager {
 		return this.getJobs().filter(job => job.status === '80_completed').length;
 	}
 
+	/** Failed objects, whether or not a job record survives for them. */
+	private getFailedIds(): string[] {
+		const failedIds = new Set(this.fileStateService.getFailedIds());
+		for (const job of this.jobs.values()) {
+			if (job.status === 'failed') {
+				failedIds.add(job.id);
+			}
+		}
+		return Array.from(failedIds);
+	}
+
 	public getFailedJobsCount(): number {
-		return this.getJobs().filter(job => job.status === 'failed').length;
+		return this.getFailedIds().length;
 	}
 
 	public async clearFailed() {
-		const failedIds: string[] = [];
-		for (const job of this.jobs.values()) {
-			if (job.status === 'failed') {
-				failedIds.push(job.id);
-			}
-		}
+		const failedIds = this.getFailedIds();
 		if (failedIds.length === 0) return;
 
-		await this.fileStateService.bulkRemove(['failed', '00_queued', '70_downloading', '80_completed', 'cancelled', '10_validating'], failedIds);
+		await this.fileStateService.clearState(failedIds);
 		await this.fileStateService.bulkRemoveJobs(failedIds);
 
 		for (const id of failedIds) {

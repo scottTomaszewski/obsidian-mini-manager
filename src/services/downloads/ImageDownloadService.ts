@@ -1,38 +1,30 @@
-import {App, Notice, TFile, TFolder, normalizePath, requestUrl} from 'obsidian';
+import {App, Notice, normalizePath, requestUrl} from 'obsidian';
 import {MMFObject} from '../../models/MMFObject';
-import {MiniManagerSettings} from '../../settings/MiniManagerSettings';
 import {DownloadJob, DownloadManager} from '../DownloadManager';
 import {LoggerService} from '../LoggerService';
-import type {ImageDownloadJob, ImageWorkerResponse} from '../../workers/imageWorkerTypes';
+import {AuthenticationError, HttpError} from '../../models/Errors';
+import {abortError, ensureFolder, fileExists} from '../../utils/vault';
 
 export class ImageDownloadService {
 	private app: App;
-	private settings: MiniManagerSettings;
 	private logger: LoggerService;
 	private downloadManager: DownloadManager;
-	private handleAuthError: () => void;
 
-	constructor(
-		app: App,
-		settings: MiniManagerSettings,
-		logger: LoggerService,
-		downloadManager: DownloadManager,
-		handleAuthError: () => void
-	) {
+	constructor(app: App, logger: LoggerService, downloadManager: DownloadManager) {
 		this.app = app;
-		this.settings = settings;
 		this.logger = logger;
 		this.downloadManager = downloadManager;
-		this.handleAuthError = handleAuthError;
 	}
 
+	/**
+	 * Downloads an object's images. Rejects with an AuthenticationError when the user needs
+	 * to log in again, or an HttpError carrying the status when the server refuses an image.
+	 */
 	public async downloadImages(job: DownloadJob, object: MMFObject, folderPath: string, signal: AbortSignal): Promise<string | undefined> {
 		this.logger.info(`Processing object for images: ${object.id} ${object.name}`);
 
 		const imagesPath = normalizePath(`${folderPath}/images`);
-		if (!await this.folderExists(imagesPath)) {
-			await this.app.vault.createFolder(imagesPath);
-		}
+		await ensureFolder(this.app, imagesPath);
 
 		let mainLocalImagePath: string | undefined;
 
@@ -44,27 +36,23 @@ export class ImageDownloadService {
 			this.logger.info(`No images array found for object ${object.id}`);
 		} else {
 			this.logger.info(`Found ${imageArray.length} images in the object`);
-			const jobs: ImageDownloadJob[] = [];
+			const images: { url: string; baseFileName: string }[] = [];
 
 			for (let i = 0; i < imageArray.length; i++) {
-				const imageUrl = this.getImageUrl(imageArray[i]);
+				const imageUrl = getImageUrl(imageArray[i]);
 				if (!imageUrl) {
 					this.logger.warn(`Could not determine URL for image ${i + 1}`);
 					continue;
 				}
-				const filename = `image_${i + 1}${this.getFileExtensionFromUrl(imageUrl)}`;
-				jobs.push({url: imageUrl, filename});
+				images.push({url: imageUrl, baseFileName: `image_${i + 1}`});
 			}
 
-			if (jobs.length > 0) {
-				for (let i = 0; i < jobs.length; i++) {
-					if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-					const jobItem = jobs[i];
-					this.downloadManager.updateJob(job.id, 'downloading', 50 + Math.round(((i + 1) / jobs.length) * 10), `Downloading image ${i + 1}/${jobs.length}`);
-					const downloadedPath = await this.downloadSingleImage(jobItem.url, imagesPath, jobItem.filename.replace(/\.[^.]+$/, ''), signal);
-					if (downloadedPath && !mainLocalImagePath) {
-						mainLocalImagePath = downloadedPath;
-					}
+			for (let i = 0; i < images.length; i++) {
+				if (signal.aborted) throw abortError();
+				await this.downloadManager.updateJob(job.id, '50_downloading_images', 50 + Math.round(((i + 1) / images.length) * 10), `Downloading image ${i + 1}/${images.length}`);
+				const downloadedPath = await this.downloadSingleImage(images[i].url, imagesPath, images[i].baseFileName, signal);
+				if (downloadedPath && !mainLocalImagePath) {
+					mainLocalImagePath = downloadedPath;
 				}
 			}
 		}
@@ -74,7 +62,7 @@ export class ImageDownloadService {
 			this.logger.info("No images were downloaded, creating placeholder");
 			const placeholderPath = normalizePath(`${imagesPath}/no_images.md`);
 			const placeholderContent = `# No Images Available\n\nNo images could be downloaded for this object.\n\nPlease visit the original page to view images:\n${object.url}`;
-			if (!await this.fileExists(placeholderPath)) {
+			if (!fileExists(this.app, placeholderPath)) {
 				await this.app.vault.create(placeholderPath, placeholderContent);
 			}
 		}
@@ -84,73 +72,12 @@ export class ImageDownloadService {
 		return mainLocalImagePath;
 	}
 
-	private async fetchImagesWithWorker(jobs: ImageDownloadJob[], signal: AbortSignal): Promise<ImageWorkerResponse> {
-		return new Promise((resolve, reject) => {
-			let worker: Worker | null = null;
-			const cleanup = () => {
-				if (worker) {
-					worker.terminate();
-					worker = null;
-				}
-			};
-
-			if (signal.aborted) {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-				return;
-			}
-
-			const abortListener = () => {
-				cleanup();
-				reject(new DOMException('Aborted', 'AbortError'));
-			};
-
-			signal.addEventListener('abort', abortListener, {once: true});
-
-			try {
-				worker = new Worker(new URL('../../workers/image.worker.ts', import.meta.url), {type: 'module'});
-			} catch (error) {
-				console.log("fallback 1")
-
-				try {
-					worker = new Worker(new URL('../../workers/image.worker.js', import.meta.url), {type: 'module'});
-				} catch (fallbackError) {
-					console.log("fallback 2")
-					signal.removeEventListener('abort', abortListener);
-					reject(fallbackError);
-					return;
-				}
-
-			}
-
-			worker.onmessage = (event: MessageEvent<ImageWorkerResponse>) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				resolve(event.data);
-			};
-
-			worker.onerror = (err) => {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(err);
-			};
-
-			try {
-				worker.postMessage({jobs});
-			} catch (error) {
-				signal.removeEventListener('abort', abortListener);
-				cleanup();
-				reject(error);
-			}
-		});
-	}
-
 	private async downloadSingleImage(url: string, folderPath: string, baseFileName: string, signal: AbortSignal): Promise<string | undefined> {
 		try {
 			const fileName = `${baseFileName}${this.getFileExtensionFromUrl(url)}`;
 			const filePath = normalizePath(`${folderPath}/${fileName}`);
 
-			if (await this.fileExists(filePath)) {
+			if (fileExists(this.app, filePath)) {
 				this.logger.info(`Skipping download of image ${filePath}: already exists.`);
 				return filePath;
 			}
@@ -165,17 +92,22 @@ export class ImageDownloadService {
 					'Pragma': 'no-cache',
 					'Expires': '0',
 				},
-				signal: signal // Pass signal here
+				throw: false // Status codes are handled below
 			});
+			if (signal.aborted) throw abortError();
+
+			if (response.status === 401) {
+				throw new AuthenticationError(`Not authorized to download image: ${fileName}`);
+			}
 
 			if (response.status !== 200) {
-				throw new Error(`Failed to download image: ${response.status}`);
+				throw new HttpError(`Failed to download image: ${response.status}`, response.status);
 			}
 
 			const contentType = response.headers['content-type'];
 			if (contentType && contentType.includes('text/html')) {
-				this.handleAuthError();
-				throw new Error('Invalid content type: received text/html. This may be a login redirect.');
+				// Images are public, so unlike a file this says nothing about the login.
+				throw new Error(`Received a web page instead of ${fileName}.`);
 			}
 
 			await this.app.vault.createBinary(filePath, response.arrayBuffer);
@@ -188,27 +120,11 @@ export class ImageDownloadService {
 
 			const placeholderPath = normalizePath(`${folderPath}/${baseFileName}_error.md`);
 			const placeholderContent = `# Download Error\n\nFailed to download image from: ${url}\n\nError: ${error.message}\n\nPlease visit the MyMiniFactory website to view this image.`;
-			if (!await this.fileExists(placeholderPath)) {
+			if (!fileExists(this.app, placeholderPath)) {
 				await this.app.vault.create(placeholderPath, placeholderContent);
 			}
 			throw error;
 		}
-	}
-
-	private getImageUrl(image: any): string | undefined {
-		if (typeof image === 'string' && image.startsWith('http')) {
-			return image;
-		}
-		if (!image || typeof image !== 'object') {
-			return undefined;
-		}
-		if (image.large && image.large.url) return image.large.url;
-		if (image.standard && image.standard.url) return image.standard.url;
-		if (image.original && image.original.url) return image.original.url;
-		if (image.thumbnail && image.thumbnail.url) return image.thumbnail.url;
-		if (image.tiny && image.tiny.url) return image.tiny.url;
-		if (typeof image.url === 'string' && image.url.startsWith('http')) return image.url;
-		return undefined;
 	}
 
 	private getFileExtensionFromUrl(url: string): string {
@@ -224,22 +140,21 @@ export class ImageDownloadService {
 			return ".jpg";
 		}
 	}
+}
 
-	private async folderExists(path: string): Promise<boolean> {
-		try {
-			const folder = this.app.vault.getAbstractFileByPath(path);
-			return folder instanceof TFolder;
-		} catch {
-			return false;
-		}
+/** The best available URL for an image as the API describes it. */
+export function getImageUrl(image: any): string | undefined {
+	if (typeof image === 'string' && image.startsWith('http')) {
+		return image;
 	}
-
-	private async fileExists(path: string): Promise<boolean> {
-		try {
-			const file = this.app.vault.getAbstractFileByPath(path);
-			return file instanceof TFile;
-		} catch {
-			return false;
-		}
+	if (!image || typeof image !== 'object') {
+		return undefined;
 	}
+	if (image.large && image.large.url) return image.large.url;
+	if (image.standard && image.standard.url) return image.standard.url;
+	if (image.original && image.original.url) return image.original.url;
+	if (image.thumbnail && image.thumbnail.url) return image.thumbnail.url;
+	if (image.tiny && image.tiny.url) return image.tiny.url;
+	if (typeof image.url === 'string' && image.url.startsWith('http')) return image.url;
+	return undefined;
 }

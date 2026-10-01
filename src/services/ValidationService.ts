@@ -1,8 +1,8 @@
-import { App, Platform } from 'obsidian';
+import { App, DataAdapter, FileSystemAdapter } from 'obsidian';
 import { MiniManagerSettings } from '../settings/MiniManagerSettings';
 import { MMFObject } from '../models/MMFObject';
 import { FileStateService } from './FileStateService';
-import createValidationWorker from '../workers/validation.worker';
+import { createValidationWorker } from '../workers/factories';
 import { processValidationPayload } from '../workers/validationWorkerProcessor';
 import type { ValidationWorkerInput, ValidationWorkerOutput } from '../workers/validationWorkerTypes';
 
@@ -11,6 +11,18 @@ export interface ValidationResult {
     folderPath: string;
     isValid: boolean;
     errors: string[];
+}
+
+export const PLACEHOLDER_ERROR = 'Placeholder only: the object was never fetched from MyMiniFactory.';
+
+/**
+ * Whether this is metadata the plugin made up rather than fetched. Older versions saved
+ * such a placeholder, and marked the download complete, when the API call failed.
+ */
+export function isPlaceholderObject(object: MMFObject): boolean {
+	return object?.name === `Object ${object?.id}` &&
+		(object.images?.length ?? 0) === 0 &&
+		(object.files?.items?.length ?? 0) === 0;
 }
 
 export class ValidationService {
@@ -88,14 +100,8 @@ export class ValidationService {
                     const metadataContent = await adapter.read(metadataPath);
                     const object = JSON.parse(metadataContent) as MMFObject;
                     const metadataId = object?.id !== undefined ? String(object.id) : null;
-                    const isPlaceholder =
-                        typeof object?.name === 'string' &&
-                        object.name.trim().toLowerCase().startsWith('object ') &&
-                        !object.url &&
-                        (!(object.files && 'items' in object.files) || (object.files.items?.length ?? 0) === 0) &&
-                        ((object.images?.length ?? 0) === 0);
 
-                    if (metadataId === targetId && !isPlaceholder) {
+                    if (metadataId === targetId) {
                         return objectFolder;
                     }
                 }
@@ -106,6 +112,10 @@ export class ValidationService {
     }
 
     private async validateObject(object: MMFObject, folderPath: string): Promise<ValidationResult> {
+		if (isPlaceholderObject(object)) {
+			return { object, folderPath, isValid: false, errors: [PLACEHOLDER_ERROR] };
+		}
+
 		const payload = await this.buildValidationPayload(object, folderPath);
 		let errors: string[] = [];
 
@@ -205,19 +215,20 @@ export class ValidationService {
 			};
 
 			try {
-				worker = createValidationWorker();
+				const started = createValidationWorker();
+				worker = started;
 
-				worker.onmessage = (event: MessageEvent<ValidationWorkerOutput>) => {
+				started.onmessage = (event: MessageEvent<ValidationWorkerOutput>) => {
 					cleanup();
 					resolve(event.data.errors);
 				};
 
-				worker.onerror = (err) => {
+				started.onerror = (err) => {
 					cleanup();
 					reject(err);
 				};
 
-				worker.postMessage(payload);
+				started.postMessage(payload);
 			} catch (error) {
 				cleanup();
 				reject(error);
@@ -225,7 +236,7 @@ export class ValidationService {
 		});
 	}
 
-	private createValidationTask(objectFolder: string, adapter: typeof this.app.vault.adapter): () => Promise<ValidationResult | null> {
+	private createValidationTask(objectFolder: string, adapter: DataAdapter): () => Promise<ValidationResult | null> {
 		return async () => {
 			const metadataPath = `${objectFolder}/mmf-metadata.json`;
 			if (!await adapter.exists(metadataPath)) {
@@ -281,9 +292,10 @@ export class ValidationService {
 	private async isHtmlFile(filePath: string): Promise<boolean> {
 		const adapter = this.app.vault.adapter;
 		try {
-			if (Platform.isDesktop) {
+			if (adapter instanceof FileSystemAdapter) {
+				// Desktop: read just the head of the file rather than the whole thing.
 				const fs = require('fs');
-				const fullPath = this.app.vault.adapter.getFullPath(filePath);
+				const fullPath = adapter.getFullPath(filePath);
 				return new Promise((resolve) => {
 					const stream = fs.createReadStream(fullPath, { start: 0, end: 511 });
 					let data = '';
@@ -300,7 +312,7 @@ export class ValidationService {
 							trimmedContent == ''
 						);
 					});
-					stream.on('error', (err) => {
+					stream.on('error', (err: Error) => {
 						console.error(`Error reading file for HTML check: ${filePath}`, err);
 						resolve(false);
 					});

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Fixes objects being saved as `Unknown/Object <id>` and marked complete when the MyMiniFactory login had expired or the API call failed. Such failures now fail the object instead
+- Downloads pause, with objects left in the queue, when the login has expired; logging in again resumes them and retries the objects that failed on authentication
+- Adds "Retry failed downloads" (command and download manager button)
+- "Validate all" now flags existing `Unknown/Object <id>` placeholder folders so they can be retried
+- An object is only ever in one state; fixes ids being lost from, or duplicated across, the state files
+- Fixes downloads stalling between stages until "Resume Downloads" was run
+- File and image download errors are recorded with their HTTP status
+- A 403 (from the API or for a file) now fails only that object instead of pausing all downloads
+- Retrying an object keeps files placed by hand after a `MANUAL_DOWNLOAD_REQUIRED.md` notice
+- Objects requested while downloads are paused are queued instead of dropped
+- Honours the Max Retries setting; removes the Strict API Mode setting
+- API key and access token are no longer written to `debug.log`
+- Adds a test suite and a demo vault
+
 ## 0.0.43
 
 - Allows configuration of max validation threads
