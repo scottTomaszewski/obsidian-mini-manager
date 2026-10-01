@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.44
 
 - Fixes objects being saved as `Unknown/Object <id>` and marked complete when the MyMiniFactory login had expired or the API call failed. Such failures now fail the object instead
 - Downloads pause, with objects left in the queue, when the login has expired; logging in again resumes them and retries the objects that failed on authentication
