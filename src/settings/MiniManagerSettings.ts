@@ -71,14 +71,11 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Login')
 				.onClick(() => {
-					const redirectUri = 'https://www.myminifactory.com/oauth/callback';
-					const url = new URL("https://auth.myminifactory.com/web/authorize");
-					url.searchParams.set("client_id", this.plugin.settings.clientId);
-					url.searchParams.set("redirect_uri", redirectUri);
-					url.searchParams.set("response_type", "token");
-					url.searchParams.set("state", "obsidian-mini-manager");
-
-					window.open(url.toString(), '_blank');
+					try {
+						window.open(this.plugin.oauth2Service.getLoginUrl(), '_blank');
+					} catch (e) {
+						new Notice(e.message);
+					}
 				})
 			);
 

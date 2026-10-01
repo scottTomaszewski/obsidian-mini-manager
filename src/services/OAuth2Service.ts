@@ -52,6 +52,24 @@ export class OAuth2Service {
 	}
 
 	/**
+	 * The page to send the user to in order to log in.
+	 * @throws if no client ID has been entered; MyMiniFactory would only answer "Client not found".
+	 */
+	getLoginUrl(): string {
+		const clientId = this.settings.clientId.trim();
+		if (!clientId) {
+			throw new Error("Enter your client ID first. It comes from an application in the MMF Developer Portal.");
+		}
+
+		const url = new URL("https://auth.myminifactory.com/web/authorize");
+		url.searchParams.set("client_id", clientId);
+		url.searchParams.set("redirect_uri", "https://www.myminifactory.com/oauth/callback");
+		url.searchParams.set("response_type", "token");
+		url.searchParams.set("state", "obsidian-mini-manager");
+		return url.toString();
+	}
+
+	/**
 	 * For MMF implicit flow:
 	 * 1. You open the authorize URL with response_type=token and a state value.
 	 * 2. MMF redirects to redirectUri with a fragment:

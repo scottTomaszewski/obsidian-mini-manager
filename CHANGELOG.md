@@ -16,6 +16,7 @@
 - Honours the Max Retries setting; removes the Strict API Mode setting
 - Credentials are no longer written to `debug.log`
 - Removes the API key and client secret settings; the MyMiniFactory login is the only way to authenticate
+- The Login button asks for a client ID when none is set, instead of opening MyMiniFactory's "Client not found" page
 - Adds a test suite and a demo vault
 
 ## 0.0.43

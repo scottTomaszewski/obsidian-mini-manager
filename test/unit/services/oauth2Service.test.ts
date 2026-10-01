@@ -73,6 +73,35 @@ describe('OAuth2Service', () => {
 		});
 	});
 
+	describe('getLoginUrl', () => {
+		test('is the MyMiniFactory authorize page for the configured client', () => {
+			env.settings.clientId = 'my-client-id';
+
+			const url = new URL(service().getLoginUrl());
+
+			expect(`${url.origin}${url.pathname}`).toBe('https://auth.myminifactory.com/web/authorize');
+			expect(Object.fromEntries(url.searchParams)).toEqual({
+				client_id: 'my-client-id',
+				redirect_uri: 'https://www.myminifactory.com/oauth/callback',
+				response_type: 'token',
+				state: 'obsidian-mini-manager',
+			});
+		});
+
+		test('ignores whitespace pasted around the client ID', () => {
+			env.settings.clientId = '  my-client-id\n';
+
+			expect(new URL(service().getLoginUrl()).searchParams.get('client_id')).toBe('my-client-id');
+		});
+
+		// MyMiniFactory answers a login with no client ID with a bare "Client not found" page.
+		test.each(['', '   '])('refuses to build a URL when the client ID is %j', clientId => {
+			env.settings.clientId = clientId;
+
+			expect(() => service().getLoginUrl()).toThrow('Enter your client ID first');
+		});
+	});
+
 	describe('exchangeCodeForToken', () => {
 		test('reads the token out of the redirect URL fragment and stores it in settings', async () => {
 			const oauth2 = service();
