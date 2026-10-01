@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.45
 
 - "Validate Downloads" now marks bad downloads as failed, so "Retry Failed" and bulk download pick them up instead of treating them as completed
 - A placeholder folder under `Unknown/` is removed when the same model also has a real download, which is the one that gets checked
