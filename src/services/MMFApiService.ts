@@ -143,8 +143,8 @@ export class MMFApiService {
 
     async searchObjects(query: string, page: number = 1, perPage: number = 10): Promise<MMFObject[]> {
         try {
-            const data = await this.apiRequest(`/objects?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}`);
-            return data.objects || [];
+            const data = await this.apiRequest(`/search?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}`);
+            return data.items || [];
         } catch (error) {
             this.logger.error(`Error searching MMF objects: ${error.message}`);
             throw new Error(`Failed to search objects: ${error.message}`);
@@ -165,11 +165,11 @@ export class MMFApiService {
     }
 
     /**
-     * Check that the login works by making a simple API request
+     * Check that the login works by asking the API whose it is
      */
     async validateConnection(): Promise<boolean> {
         try {
-            await this.apiRequest('/objects?per_page=1');
+            await this.apiRequest('/user');
             this.logger.info("MyMiniFactory connection check successful.");
             return true;
         } catch (error) {

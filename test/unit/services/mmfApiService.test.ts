@@ -155,24 +155,25 @@ describe('MMFApiService', () => {
 		});
 	});
 
+	// GET /objects (without an id) is not an endpoint: the API answers 405.
 	describe('searchObjects', () => {
-		test('queries /objects and returns the matches', async () => {
-			mmf.url(`${API_BASE}/objects`, { json: { objects: [makeObject({ id: 1 })], total_count: 1 } });
+		test('queries /search and returns the matching items', async () => {
+			mmf.url(`${API_BASE}/search`, { json: { total_count: 1, items: [makeObject({ id: 1 })] } });
 
 			const results = await api().searchObjects('goblin king', 2, 5);
 
 			expect(results).toHaveLength(1);
-			expect(mmf.requests[0].url).toBe(`${API_BASE}/objects?q=goblin%20king&page=2&per_page=5`);
+			expect(mmf.requests[0].url).toBe(`${API_BASE}/search?q=goblin%20king&page=2&per_page=5`);
 		});
 
-		test('returns an empty list when the response has no objects', async () => {
-			mmf.url(`${API_BASE}/objects`, { json: {} });
+		test('returns an empty list when the response has no items', async () => {
+			mmf.url(`${API_BASE}/search`, { json: {} });
 
 			await expect(api().searchObjects('goblin')).resolves.toEqual([]);
 		});
 
 		test('rejects when the search fails', async () => {
-			mmf.url(`${API_BASE}/objects`, { status: 401, json: {} });
+			mmf.url(`${API_BASE}/search`, { status: 401, json: {} });
 
 			await expect(api().searchObjects('goblin')).rejects.toThrow('Failed to search objects: Authentication failed');
 		});
@@ -186,14 +187,15 @@ describe('MMFApiService', () => {
 			expect(mmf.requests).toHaveLength(0);
 		});
 
-		test('is true when the server accepts the login', async () => {
-			mmf.url(`${API_BASE}/objects`, { json: { objects: [] } });
+		test('asks the server who the login belongs to, and is true when it answers', async () => {
+			mmf.url(`${API_BASE}/user`, { json: { id: 1, username: 'someone' } });
 
 			await expect(api().validateConnection()).resolves.toBe(true);
+			expect(mmf.requests[0].url).toBe(`${API_BASE}/user`);
 		});
 
 		test('is false when the server rejects the login', async () => {
-			mmf.url(`${API_BASE}/objects`, { status: 401, json: {} });
+			mmf.url(`${API_BASE}/user`, { status: 401, json: {} });
 
 			await expect(api().validateConnection()).resolves.toBe(false);
 		});
