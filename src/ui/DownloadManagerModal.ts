@@ -4,6 +4,7 @@ import { isFailureState } from '../services/FileStateService';
 import MiniManagerPlugin from '../core/MiniManagerPlugin';
 import { ValidationService } from '../services/ValidationService';
 import { ValidationModal } from './ValidationModal';
+import { DragAwareRender } from './DragAwareRender';
 
 
 export class DownloadManagerModal extends Modal {
@@ -20,6 +21,8 @@ export class DownloadManagerModal extends Modal {
     private clearFailedButton?: HTMLButtonElement;
     private retryFailedButton?: HTMLButtonElement;
     private downloadButton?: HTMLButtonElement;
+    // Rebuilding the job list replaces the rows, which loses a drop that is in progress over them.
+    private jobsRender = new DragAwareRender(() => this.renderJobs());
 
     constructor(app: App, plugin: MiniManagerPlugin) {
         super(app);
@@ -35,9 +38,11 @@ export class DownloadManagerModal extends Modal {
         // Drag and drop functionality
         contentEl.addEventListener('dragover', (event) => {
             event.preventDefault();
+            this.jobsRender.dragOver();
         });
 
         contentEl.addEventListener('dragenter', (event) => {
+            this.jobsRender.dragEntered();
             // Check if the drag is coming from outside the element
             if (!contentEl.contains(event.relatedTarget as Node)) {
                 contentEl.addClass('drag-over');
@@ -45,6 +50,7 @@ export class DownloadManagerModal extends Modal {
         });
 
         contentEl.addEventListener('dragleave', (event) => {
+            this.jobsRender.dragLeft();
             // Check if the drag is going to a child element
             if (!contentEl.contains(event.relatedTarget as Node)) {
                 contentEl.removeClass('drag-over');
@@ -57,6 +63,7 @@ export class DownloadManagerModal extends Modal {
 
             const text = event.dataTransfer?.getData('text/plain') ?? '';
             this.handleDrop(text);
+            this.jobsRender.dropped();
         });
 
 
@@ -138,8 +145,8 @@ export class DownloadManagerModal extends Modal {
         this.jobsContainer = contentEl.createDiv('jobs-container');
         this.renderJobs();
 
-        this.listener = (jobs) => {
-            this.renderJobs(jobs);
+        this.listener = () => {
+            this.jobsRender.request();
             this.redrawButtons(contentEl);
             this.renderStats();
         };
@@ -211,6 +218,7 @@ export class DownloadManagerModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         this.downloadManager.unsubscribe(this.listener);
+        this.jobsRender.dispose();
     }
 
     private renderJobs(jobs: DownloadJob[] = this.downloadManager.getJobs()) {

@@ -12,6 +12,7 @@
 - A 403 (from the API or for a file) now fails only that object instead of pausing all downloads
 - Retrying an object keeps files placed by hand after a `MANUAL_DOWNLOAD_REQUIRED.md` notice
 - Objects requested while downloads are paused are queued instead of dropped
+- Fixes URLs dropped on the download manager occasionally not being queued while the job list was updating
 - Honours the Max Retries setting; removes the Strict API Mode setting
 - Credentials are no longer written to `debug.log`
 - Removes the API key and client secret settings; the MyMiniFactory login is the only way to authenticate
