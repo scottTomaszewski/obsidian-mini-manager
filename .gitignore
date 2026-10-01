@@ -25,3 +25,21 @@ debug.log
 /states/
 /jobs/
 /locks/
+
+# Demo vault: tracked by allowlist only. Everything else in it stays untracked,
+# including downloaded minis (whatever the download path is set to), workspace
+# state and any other plugins.
+/demo-vault/*
+!/demo-vault/Welcome.md
+!/demo-vault/.obsidian/
+/demo-vault/.obsidian/*
+!/demo-vault/.obsidian/app.json
+!/demo-vault/.obsidian/appearance.json
+!/demo-vault/.obsidian/community-plugins.json
+!/demo-vault/.obsidian/core-plugins.json
+!/demo-vault/.obsidian/plugins/
+/demo-vault/.obsidian/plugins/*
+!/demo-vault/.obsidian/plugins/mini-manager
+
+# jest
+/coverage/
