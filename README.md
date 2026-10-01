@@ -12,7 +12,7 @@ An Obsidian plugin for downloading 3D models and their metadata from MyMiniFacto
 
 ## Requirements
 
-- A valid MyMiniFactory API key (get one from the [MMF Developer Portal](https://www.myminifactory.com/settings/developer))
+- A MyMiniFactory account, and the client ID of an application created in the [MMF Developer Portal](https://www.myminifactory.com/settings/developer)
 
 ## Installation
 
@@ -42,33 +42,28 @@ These limitations are due to how web browsers handle cross-origin requests and a
 ### Configuration
 
 1. Go to Settings > Mini Manager
-2. Enter your MyMiniFactory API key:
-   - **API Key**: Your API key from MMF Developer Portal
+2. Log in to MyMiniFactory (see below)
 3. Configure download settings:
    - **Download Path**: Where models will be saved in your vault
    - **Download Images**: Whether to download preview images
    - **Download Files**: Whether to download STL and other model files
 
-#### Getting Your API Key
+#### Logging in
 
-1. Go to the [MyMiniFactory Developer Portal](https://www.myminifactory.com/settings/developer)
-2. Create a new application if you don't already have one
-3. Set the Application Name to "Obsidian Mini Manager"
-4. Copy your API key to the plugin settings
-5. Your API key should look something like: `39aa3e2d-ee2b-4cc5-bc94-a152875478a3`
+1. Go to the [MyMiniFactory Developer Portal](https://www.myminifactory.com/settings/developer) and create an application if you don't already have one
+2. Copy the application's client ID into **Client ID** in the plugin settings
+3. Click **Login**. MyMiniFactory opens in your browser; authorize the application
+4. Copy the full address of the page you are sent to (it contains `#access_token=...`) and paste it into **MyMiniFactory redirect URL**
 
-The plugin uses API key authentication for MyMiniFactory API, which is simpler and more reliable than OAuth2.
+The login expires after a while. When it does, downloads pause and the plugin asks you to log in again; repeat steps 3 and 4 and they resume.
 
 ##### Troubleshooting Authentication Issues
 
 If you encounter errors when using the plugin:
 
-1. **404 Not Found errors**: Ensure you're using the latest version of the plugin, as API endpoints may have changed.
-2. **401 Unauthorized errors**: Verify your API key is correct and not expired.
-3. **403 Forbidden errors**: Check that your application has the proper permissions enabled on the MMF Developer Portal.
-4. **Restart Obsidian**: Some changes require a restart of Obsidian to take effect.
-
-You can test your API key with this curl command:
+1. **401 Unauthorized errors**: Your login has expired or was rejected. Log in again.
+2. **403 Forbidden errors**: Your account does not have access to that object (it may be private or not purchased).
+3. **404 Not Found errors**: The object ID is wrong or the object has been removed.
 
 The plugin adds the following commands (accessible via the command palette):
 

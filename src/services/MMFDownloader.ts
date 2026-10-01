@@ -156,15 +156,9 @@ export class MMFDownloader {
 		await this.downloadManager.addJob(placeholder);
 	}
 
-	/**
-	 * Whether there is no point starting anything until the user logs in: a stored token
-	 * that has expired is used for every request, and files cannot be fetched without one.
-	 */
+	/** Every request needs a login; without one there is no point starting anything. */
 	private loginRequired(): boolean {
-		if (this.oauth2Service.hasToken()) {
-			return !this.oauth2Service.isAuthenticated();
-		}
-		return this.settings.downloadFiles && this.settings.useDirectDownload;
+		return !this.oauth2Service.isAuthenticated();
 	}
 
 	/** Pauses downloads until the user has logged in again, telling them once. */
@@ -565,7 +559,7 @@ export class MMFDownloader {
 		instructionsContent += `- API changes or outage at MyMiniFactory\n`;
 		instructionsContent += `- The object ID may be incorrect\n`;
 		instructionsContent += `- The object may require purchase\n`;
-		instructionsContent += `- Your API key may not have sufficient permissions\n`;
+		instructionsContent += `- Your account may not have access to this object\n`;
 		instructionsContent += `- The object may have been removed or made private\n\n`;
 
 		instructionsContent += `Try updating the plugin or checking the [MyMiniFactory API documentation](https://www.myminifactory.com/settings/developer) for more information.`;

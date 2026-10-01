@@ -10,7 +10,7 @@ plugin (toggle it off and on, or restart Obsidian) to pick up a rebuild.
 
 1. `npm install && npm run dev` in the repo root.
 2. Open this folder as a vault in Obsidian and choose "Trust author and enable plugins".
-3. In Settings > Mini Manager, enter your API key (and log in for paid objects).
+3. In Settings > Mini Manager, enter your client ID, click Login and paste the redirect URL back.
 4. Run "Mini Manager: Open Download Manager" from the command palette.
 
 ## What is and is not committed

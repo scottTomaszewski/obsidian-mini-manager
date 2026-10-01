@@ -22,23 +22,15 @@ export class MMFApiService {
      * Includes retry logic with exponential backoff for transient errors
      */
     private async apiRequest(endpoint: string, method: string = 'GET', retries = 0): Promise<any> {
-        let url: string;
+        // Throws an AuthenticationError if the user has not logged in or the login has expired.
+        const accessToken = await this.oauth2Service.getAccessToken();
+        const url = `${this.apiBaseUrl}${endpoint}`;
         const headers: Record<string, string> = {
-            'accept': 'application/json'
+            'accept': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
         };
         const maxRetries = this.settings.maxRetries;
 
-        let accessToken: string | undefined;
-        if (this.oauth2Service.hasToken()) {
-            accessToken = await this.oauth2Service.getAccessToken();
-            headers['Authorization'] = `Bearer ${accessToken}`;
-            url = `${this.apiBaseUrl}${endpoint}`;
-        } else {
-            const separator = endpoint.includes('?') ? '&' : '?';
-            url = `${this.apiBaseUrl}${endpoint}${separator}key=${this.settings.mmfApiKey}`;
-        }
-
-        // Log the endpoint, never the URL: the URL can carry the API key.
         this.logger.info(`API request: ${method} ${endpoint} (attempt ${retries + 1}/${maxRetries + 1})`);
 
         try {
@@ -72,11 +64,9 @@ export class MMFApiService {
 
                 switch (response.status) {
                     case 401:
-						if (accessToken) {
-							// The token looked valid locally but the server says otherwise.
-							await this.oauth2Service.invalidateToken(accessToken);
-						}
-						errorMessage = "Authentication failed: please check your API key or OAuth token" + errorMessage;
+						// The token looked valid locally but the server says otherwise.
+						await this.oauth2Service.invalidateToken(accessToken);
+						errorMessage = "Authentication failed: please log in to MyMiniFactory again" + errorMessage;
 						throw new AuthenticationError(errorMessage);
                     case 403:
 						// About this resource (private, not purchased), not about the login.
@@ -175,22 +165,15 @@ export class MMFApiService {
     }
 
     /**
-     * Check if the API key is valid by making a simple API request
+     * Check that the login works by making a simple API request
      */
-    async validateApiKey(): Promise<boolean> {
-        if (!this.settings.mmfApiKey && !this.settings.oauthToken) {
-            this.logger.warn("API Key and OAuth Token are both missing. Cannot validate API connection.");
-            return false;
-        }
-
+    async validateConnection(): Promise<boolean> {
         try {
-            // Make a simple request to validate the API key
-            // If oauthToken is available, it will be used by apiRequest
             await this.apiRequest('/objects?per_page=1');
-            this.logger.info("API key/OAuth token validation successful.");
+            this.logger.info("MyMiniFactory connection check successful.");
             return true;
         } catch (error) {
-            this.logger.error(`API key/OAuth token validation failed: ${error.message}`);
+            this.logger.error(`MyMiniFactory connection check failed: ${error.message}`);
             return false;
         }
     }

@@ -13,7 +13,8 @@
 - Retrying an object keeps files placed by hand after a `MANUAL_DOWNLOAD_REQUIRED.md` notice
 - Objects requested while downloads are paused are queued instead of dropped
 - Honours the Max Retries setting; removes the Strict API Mode setting
-- API key and access token are no longer written to `debug.log`
+- Credentials are no longer written to `debug.log`
+- Removes the API key and client secret settings; the MyMiniFactory login is the only way to authenticate
 - Adds a test suite and a demo vault
 
 ## 0.0.43

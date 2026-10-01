@@ -69,9 +69,9 @@ export default class MiniManagerPlugin extends Plugin {
 		await this.recoverOrphanedJobs();
 		await this.resumeInterruptedDownloads();
 
-		// Check if API key is set and show a notice if it's not
-		if (!this.settings.mmfApiKey && !this.settings.oauthToken) {
-			new Notice('Please set your MyMiniFactory API key in the settings.', 10000);
+		// Nothing works until the user has logged in
+		if (!this.oauth2Service.hasToken()) {
+			new Notice('Please log in to MyMiniFactory in the Mini Manager settings.', 10000);
 		}
 
 		// Register search command

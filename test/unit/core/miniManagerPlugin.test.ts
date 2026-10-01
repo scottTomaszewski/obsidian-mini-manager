@@ -32,9 +32,9 @@ describe('MiniManagerPlugin', () => {
 	});
 
 	test('saved settings override the defaults', async () => {
-		const plugin = await load({ mmfApiKey: 'abc', downloadPath: 'Minis' });
+		const plugin = await load({ clientId: 'abc', downloadPath: 'Minis' });
 
-		expect(plugin.settings).toEqual({ ...DEFAULT_SETTINGS, mmfApiKey: 'abc', downloadPath: 'Minis' });
+		expect(plugin.settings).toEqual({ ...DEFAULT_SETTINGS, clientId: 'abc', downloadPath: 'Minis' });
 	});
 
 	test('registers its commands, settings tab and ribbon icon', async () => {
@@ -54,10 +54,15 @@ describe('MiniManagerPlugin', () => {
 		expect(plugin.addRibbonIcon).toHaveBeenCalledTimes(1);
 	});
 
-	test('asks for an API key when none is set', async () => {
+	test('asks the user to log in when they never have', async () => {
 		await load();
 
-		expect(notices()).toContain('Please set your MyMiniFactory API key in the settings.');
+		expect(notices()).toEqual(['Please log in to MyMiniFactory in the Mini Manager settings.']);
+	});
+
+	test('the settings no longer include an API key or client secret', () => {
+		expect(DEFAULT_SETTINGS).not.toHaveProperty('mmfApiKey');
+		expect(DEFAULT_SETTINGS).not.toHaveProperty('clientSecret');
 	});
 
 	test('a download interrupted mid-flight is re-queued and finished on the next load', async () => {
@@ -100,7 +105,7 @@ describe('MiniManagerPlugin', () => {
 	});
 
 	test('nothing is said on load when there is nothing to do', async () => {
-		await load({ mmfApiKey: 'abc', oauthToken: oauthToken({ expired: true }) });
+		await load({ oauthToken: oauthToken({ expired: true }) });
 		await sleep(20);
 
 		expect(notices()).toEqual([]);

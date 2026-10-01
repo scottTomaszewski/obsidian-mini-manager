@@ -2,12 +2,8 @@ import {App, Notice, PluginSettingTab, Setting} from 'obsidian';
 import MiniManagerPlugin from '../core/MiniManagerPlugin';
 
 export interface MiniManagerSettings {
-	mmfApiKey: string;
 	clientId: string;
-	clientSecret: string;
 	oauthToken: string;
-	/** The `state` sent with the login request in progress, checked against the redirect. */
-	oauthPendingState?: string;
 	downloadPath: string;
 	downloadImages: boolean;
 	downloadFiles: boolean;
@@ -19,9 +15,7 @@ export interface MiniManagerSettings {
 }
 
 export const DEFAULT_SETTINGS: MiniManagerSettings = {
-	mmfApiKey: '',
 	clientId: '',
-	clientSecret: '',
 	oauthToken: '',
 	downloadPath: 'MyMiniFactory',
 	downloadImages: true,
@@ -45,12 +39,12 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 		const {containerEl} = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName('API Configuration').setHeading();
+		new Setting(containerEl).setName('MyMiniFactory login').setHeading();
 
 		containerEl.createEl('p', {
-			text: 'To authenticate with MyMiniFactory API, you need an API key from the MMF Developer Portal.'
+			text: 'Log in with your MyMiniFactory account. This needs the client ID of an application, which you can create in the MMF Developer Portal.'
 		});
-		
+
 		const linkEl = containerEl.createEl('a', {
 			text: 'Visit MMF Developer Portal',
 			href: 'https://www.myminifactory.com/settings/developer'
@@ -58,23 +52,7 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 		linkEl.setAttr('target', '_blank');
 		containerEl.createEl('br');
 		containerEl.createEl('br');
-		
-		new Setting(containerEl)
-			.setName('API Key')
-			.setDesc('Your MyMiniFactory API Key')
-			.addText(text => text
-				.setPlaceholder('Enter your API Key')
-				.setValue(this.plugin.settings.mmfApiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.mmfApiKey = value;
-					await this.plugin.saveSettings();
-				})
-			);
 
-		new Setting(containerEl).setName('OAuth2 Configuration').setHeading();
-		containerEl.createEl('p', {
-			text: 'For downloading paid objects, you need to authenticate with OAuth2. You can create an application in the MMF Developer Portal.'
-		});
 		new Setting(containerEl)
 			.setName('Client ID')
 			.setDesc('Your MyMiniFactory Application Client ID')
@@ -86,34 +64,19 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-		new Setting(containerEl)
-			.setName('Client Secret')
-			.setDesc('Your MyMiniFactory Application Client Secret')
-			.addText(text => text
-				.setPlaceholder('Enter your Client Secret')
-				.setValue(this.plugin.settings.clientSecret)
-				.onChange(async (value) => {
-					this.plugin.settings.clientSecret = value;
-					await this.plugin.saveSettings();
-				})
-			);
 
 		new Setting(containerEl)
 			.setName('Login with MyMiniFactory')
-			.setDesc('Authenticate with your MyMiniFactory account to download paid objects.')
+			.setDesc('Opens MyMiniFactory in your browser. After authorizing, copy the address of the page you are sent to.')
 			.addButton(button => button
 				.setButtonText('Login')
-				.onClick(async () => {
+				.onClick(() => {
 					const redirectUri = 'https://www.myminifactory.com/oauth/callback';
-					const state = `obsidian-mini-manager-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-					this.plugin.settings.oauthPendingState = state;
-					await this.plugin.saveSettings();
-
 					const url = new URL("https://auth.myminifactory.com/web/authorize");
 					url.searchParams.set("client_id", this.plugin.settings.clientId);
 					url.searchParams.set("redirect_uri", redirectUri);
 					url.searchParams.set("response_type", "token");
-					url.searchParams.set("state", state);
+					url.searchParams.set("state", "obsidian-mini-manager");
 
 					window.open(url.toString(), '_blank');
 				})
@@ -135,15 +98,7 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 
 						try {
 							// Stores the token and resumes downloads that were waiting on a login.
-							await this.plugin.oauth2Service.exchangeCodeForToken(
-								value,
-								this.plugin.settings.oauthPendingState
-							);
-
-							// Clear the pending state once used
-							this.plugin.settings.oauthPendingState = undefined;
-
-							await this.plugin.saveSettings();
+							await this.plugin.oauth2Service.exchangeCodeForToken(value);
 							new Notice("Successfully authenticated with MyMiniFactory!");
 						} catch (e) {
 							console.error(e);
@@ -257,23 +212,23 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 		// Add a test connection button
 		new Setting(containerEl)
 			.setName('Test API Connection')
-			.setDesc('Click to test your API key and connection to MyMiniFactory')
+			.setDesc('Click to test your login and connection to MyMiniFactory')
 			.addButton(button => button
 				.setButtonText('Test Connection')
 				.onClick(async () => {
-					if (!this.plugin.settings.mmfApiKey && !this.plugin.settings.oauthToken) {
-						new Notice('Please enter an API key or log in first');
+					if (!this.plugin.settings.oauthToken) {
+						new Notice('Please log in first');
 						return;
 					}
 					
 					new Notice('Testing connection to MyMiniFactory API...');
 					
 					try {
-						const isValid = await this.plugin.apiService.validateApiKey();
+						const isValid = await this.plugin.apiService.validateConnection();
 						if (isValid) {
-							new Notice('✅ Connection successful! Your credentials are valid.');
+							new Notice('✅ Connection successful! Your login is valid.');
 						} else {
-							new Notice('❌ Connection failed. Please check your API key or log in again.');
+							new Notice('❌ Connection failed. Please log in again.');
 						}
 					} catch (error) {
 						new Notice(`❌ Connection test failed: ${error.message}`);

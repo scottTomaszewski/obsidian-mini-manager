@@ -13,7 +13,7 @@ describe('MMFApiService', () => {
 	let mmf: FakeMmf;
 
 	beforeEach(async () => {
-		env = await createEnv({ mmfApiKey: 'secret-api-key' });
+		env = await createEnv({ oauthToken: oauthToken({ accessToken: 'secret-access-token' }) });
 		mmf = new FakeMmf().install();
 	});
 
@@ -23,23 +23,21 @@ describe('MMFApiService', () => {
 	};
 
 	describe('authentication', () => {
-		test('sends the API key as a query parameter when there is no OAuth token', async () => {
-			mmf.object(makeObject({ id: 1 }));
-
-			await api().getObjectById('1');
-
-			expect(mmf.requests[0].url).toBe(`${API_BASE}/objects/1?key=secret-api-key`);
-			expect(mmf.requests[0].headers).not.toHaveProperty('Authorization');
-		});
-
-		test('sends a bearer token, and no API key, when an OAuth token is stored', async () => {
-			env.settings.oauthToken = oauthToken({ accessToken: 'abc' });
+		test('sends the access token from the login as a bearer token, and nothing in the URL', async () => {
 			mmf.object(makeObject({ id: 1 }));
 
 			await api().getObjectById('1');
 
 			expect(mmf.requests[0].url).toBe(`${API_BASE}/objects/1`);
-			expect(mmf.requests[0].headers).toMatchObject({ Authorization: 'Bearer abc' });
+			expect(mmf.requests[0].headers).toMatchObject({ Authorization: 'Bearer secret-access-token' });
+		});
+
+		test('rejects with an AuthenticationError, without asking the server, when the user has never logged in', async () => {
+			env.settings.oauthToken = '';
+			mmf.object(makeObject({ id: 1 }));
+
+			await expect(api().getObjectById('1')).rejects.toBeInstanceOf(AuthenticationError);
+			expect(mmf.requests).toHaveLength(0);
 		});
 	});
 
@@ -164,7 +162,7 @@ describe('MMFApiService', () => {
 			const results = await api().searchObjects('goblin king', 2, 5);
 
 			expect(results).toHaveLength(1);
-			expect(mmf.requests[0].url).toBe(`${API_BASE}/objects?q=goblin%20king&page=2&per_page=5&key=secret-api-key`);
+			expect(mmf.requests[0].url).toBe(`${API_BASE}/objects?q=goblin%20king&page=2&per_page=5`);
 		});
 
 		test('returns an empty list when the response has no objects', async () => {
@@ -180,38 +178,35 @@ describe('MMFApiService', () => {
 		});
 	});
 
-	describe('validateApiKey', () => {
-		test('is false, without asking the server, when there are no credentials', async () => {
-			env.settings.mmfApiKey = '';
+	describe('validateConnection', () => {
+		test('is false, without asking the server, when the user is not logged in', async () => {
+			env.settings.oauthToken = '';
 
-			await expect(api().validateApiKey()).resolves.toBe(false);
+			await expect(api().validateConnection()).resolves.toBe(false);
 			expect(mmf.requests).toHaveLength(0);
 		});
 
-		test('is true when the server accepts the credentials', async () => {
+		test('is true when the server accepts the login', async () => {
 			mmf.url(`${API_BASE}/objects`, { json: { objects: [] } });
 
-			await expect(api().validateApiKey()).resolves.toBe(true);
+			await expect(api().validateConnection()).resolves.toBe(true);
 		});
 
-		test('is false when the server rejects the credentials', async () => {
+		test('is false when the server rejects the login', async () => {
 			mmf.url(`${API_BASE}/objects`, { status: 401, json: {} });
 
-			await expect(api().validateApiKey()).resolves.toBe(false);
+			await expect(api().validateConnection()).resolves.toBe(false);
 		});
 	});
 
-	test('credentials are kept out of the debug log', async () => {
+	test('the access token is kept out of the debug log', async () => {
 		mmf.object(makeObject({ id: 1 }));
-		await api().getObjectById('1');
 
-		env.settings.oauthToken = oauthToken({ accessToken: 'secret-access-token' });
 		await api().getObjectById('1');
 		await sleep(5);
 
 		const log = readText(env, LOG_FILE);
 		expect(log).toContain('/objects/1');
-		expect(log).not.toContain('secret-api-key');
 		expect(log).not.toContain('secret-access-token');
 	});
 });

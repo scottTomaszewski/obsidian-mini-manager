@@ -287,22 +287,16 @@ describe('MMFDownloader', () => {
 		});
 	});
 
-	test('file downloads need a login: without one the object waits in the queue', async () => {
-		await setup({ oauthToken: '', mmfApiKey: 'api-key' });
+	test('without a login the object waits in the queue, whatever is being downloaded', async () => {
+		await setup({ oauthToken: '', downloadFiles: false, downloadImages: false });
 		serveGoblin();
 
 		await downloader.downloadObject(OBJECT_ID);
 		await waitFor(() => downloader.isPausedState(), () => 'downloads to pause');
 
 		expect(statesOf(env, OBJECT_ID)).toEqual(['00_queued']);
+		expect(mmf.requests).toEqual([]);
 		expect(authNotices()).toHaveLength(1);
-	});
-
-	test('an API key alone is enough when files are not being downloaded', async () => {
-		await setup({ oauthToken: '', mmfApiKey: 'api-key', downloadFiles: false });
-		serveGoblin();
-
-		expect(await download()).toEqual(['80_completed']);
 	});
 
 	describe('failures', () => {
