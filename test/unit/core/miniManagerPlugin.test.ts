@@ -65,6 +65,10 @@ describe('MiniManagerPlugin', () => {
 		expect(DEFAULT_SETTINGS).not.toHaveProperty('clientSecret');
 	});
 
+	test('the settings no longer include the direct download switch: files are always downloaded', () => {
+		expect(DEFAULT_SETTINGS).not.toHaveProperty('useDirectDownload');
+	});
+
 	test('a download interrupted mid-flight is re-queued and finished on the next load', async () => {
 		mmf.object(bare);
 		await env.adapter.mkdir(STATE_DIR);

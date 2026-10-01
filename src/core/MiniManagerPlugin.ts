@@ -43,7 +43,7 @@ export default class MiniManagerPlugin extends Plugin {
 		// Initialize services that depend on settings
 		this.oauth2Service = new OAuth2Service(this.settings, this.logger, () => this.saveSettings());
 		this.apiService = new MMFApiService(this.settings, this.logger, this.oauth2Service);
-		this.validationService = new ValidationService(this.app, this.settings, this.fileStateService);
+		this.validationService = new ValidationService(this.app, this.settings, this.fileStateService, this.downloadManager);
 
 		this.downloader = new MMFDownloader(
 			this.app,

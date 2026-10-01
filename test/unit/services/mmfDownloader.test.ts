@@ -33,7 +33,7 @@ describe('MMFDownloader', () => {
 
 	/** A logged-in user with direct file downloads on, unless overridden. */
 	async function setup(settings: Partial<MiniManagerSettings> = {}): Promise<void> {
-		env = await createEnv({ oauthToken: oauthToken(), useDirectDownload: true, ...settings });
+		env = await createEnv({ oauthToken: oauthToken(), ...settings });
 		mmf = new FakeMmf().install();
 		({ downloader, downloadManager, fileState, oauth2 } = await createServices(env));
 	}
@@ -154,6 +154,39 @@ describe('MMFDownloader', () => {
 		expect(readText(env, `${OBJECT_FOLDER}/files/supported/goblin_a.stl`)).toBe('solid goblin_a');
 	});
 
+	describe('a zip that cannot be extracted', () => {
+		const zipObject = {
+			files: { total_count: 1, items: [{ id: 900002, filename: 'goblins.zip', size: 4096, download_url: ZIP_URL }] },
+		};
+		const corrupt = { arrayBuffer: bytes('this is not a zip archive'), headers: { 'content-type': 'application/zip' } };
+
+		test('fails the object instead of completing it', async () => {
+			await setup();
+			serveGoblin(zipObject);
+			mmf.url(ZIP_URL, corrupt);
+
+			expect(await download()).toEqual(['failure_unknown']);
+			expect(downloadManager.getJob(OBJECT_ID)?.error).toContain('Failed to extract goblins.zip');
+		});
+
+		test('does not keep the zip, so a retry fetches it again and extracts it', async () => {
+			await setup();
+			serveGoblin(zipObject);
+			const zip = new JSZip();
+			zip.file('goblin_a.stl', 'solid goblin_a');
+			const good = { arrayBuffer: await zip.generateAsync({ type: 'arraybuffer' }), headers: { 'content-type': 'application/zip' } };
+			mmf.url(ZIP_URL, [corrupt, good]);
+
+			await download();
+			expect(await env.adapter.exists(`${OBJECT_FOLDER}/files/goblins.zip`)).toBe(false);
+
+			await downloader.retryFailed();
+
+			expect(await settled(OBJECT_ID)).toEqual(['80_completed']);
+			expect(readText(env, `${OBJECT_FOLDER}/files/goblin_a.stl`)).toBe('solid goblin_a');
+		});
+	});
+
 	describe('download settings', () => {
 		test('images are skipped when "Download Images" is off', async () => {
 			await setup({ downloadImages: false });
@@ -171,14 +204,6 @@ describe('MMFDownloader', () => {
 			expect(await download()).toEqual(['80_completed']);
 			expect(mmf.requestsTo(STL_URL)).toEqual([]);
 			expect(filesUnder(env, OBJECT_FOLDER)).toEqual(['README.md', 'images/image_1.jpg', 'images/image_2.png', 'mmf-metadata.json']);
-		});
-
-		test('files are skipped when "Direct Download Method" is off', async () => {
-			await setup({ useDirectDownload: false });
-			serveGoblin();
-
-			expect(await download()).toEqual(['80_completed']);
-			expect(mmf.requestsTo(STL_URL)).toEqual([]);
 		});
 
 		test('objects are saved under the configured download path', async () => {
@@ -519,6 +544,27 @@ describe('MMFDownloader', () => {
 				held.release();
 				expect(await settled(OBJECT_ID)).toEqual(['80_completed']);
 			});
+		});
+
+		// An older version could leave a placeholder under Unknown/ and, after a later
+		// successful attempt, the real download as well.
+		test('a stale placeholder folder is removed when the object also has a real, valid download', async () => {
+			await setup();
+			serveGoblin();
+			await download();
+			const placeholderFolder = `MyMiniFactory/Unknown/Object ${OBJECT_ID}`;
+			await env.adapter.mkdir(placeholderFolder);
+			await env.adapter.write(`${placeholderFolder}/README.md`, '---\nname: Object 12345\n---\n');
+			await env.adapter.write(
+				`${placeholderFolder}/mmf-metadata.json`,
+				JSON.stringify({ id: OBJECT_ID, name: `Object ${OBJECT_ID}`, description: '', url: '', images: [], files: { total_count: 0, items: [] } })
+			);
+			mmf.requests = [];
+
+			expect(await download()).toEqual(['80_completed']);
+			expect(await env.adapter.exists(placeholderFolder)).toBe(false);
+			expect(await env.adapter.exists(`${OBJECT_FOLDER}/files/goblin.stl`)).toBe(true);
+			expect(mmf.requests).toEqual([]);
 		});
 
 		// Older versions saved a placeholder to Unknown/Object <id> when the API call failed

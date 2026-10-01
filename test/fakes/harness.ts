@@ -48,7 +48,7 @@ export async function createServices(env: TestEnv) {
 	const { logger, fileState, downloadManager } = await createStateServices(env);
 	const oauth2 = new OAuth2Service(env.settings, logger, async () => {});
 	const api = new MMFApiService(env.settings, logger, oauth2);
-	const validation = new ValidationService(env.app, env.settings, fileState);
+	const validation = new ValidationService(env.app, env.settings, fileState, downloadManager);
 	const downloader = new MMFDownloader(env.app, env.settings, logger, oauth2, api, validation, fileState, downloadManager, PLUGIN_DIR);
 	return { logger, fileState, downloadManager, oauth2, api, validation, downloader };
 }

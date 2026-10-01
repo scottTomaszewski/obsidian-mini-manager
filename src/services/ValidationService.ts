@@ -1,7 +1,8 @@
 import { App, DataAdapter, FileSystemAdapter } from 'obsidian';
 import { MiniManagerSettings } from '../settings/MiniManagerSettings';
 import { MMFObject } from '../models/MMFObject';
-import { FileStateService } from './FileStateService';
+import { ACTIVE_STATES, COMPLETED_STATE, FileStateService } from './FileStateService';
+import { DownloadManager } from './DownloadManager';
 import { createValidationWorker } from '../workers/factories';
 import { processValidationPayload } from '../workers/validationWorkerProcessor';
 import type { ValidationWorkerInput, ValidationWorkerOutput } from '../workers/validationWorkerTypes';
@@ -11,7 +12,12 @@ export interface ValidationResult {
     folderPath: string;
     isValid: boolean;
     errors: string[];
+    /** Placeholder folders for the same object that should simply be deleted. */
+    staleFolders?: string[];
 }
+
+/** The state of an object whose download was checked and found wanting. */
+export const VALIDATION_FAILURE_STATE = 'failure_validation';
 
 export const PLACEHOLDER_ERROR = 'Placeholder only: the object was never fetched from MyMiniFactory.';
 
@@ -29,11 +35,13 @@ export class ValidationService {
     private app: App;
     private settings: MiniManagerSettings;
 	private fileStateService: FileStateService;
+	private downloadManager: DownloadManager;
 
-    constructor(app: App, settings: MiniManagerSettings, fileStateService: FileStateService) {
+    constructor(app: App, settings: MiniManagerSettings, fileStateService: FileStateService, downloadManager: DownloadManager) {
         this.app = app;
         this.settings = settings;
 		this.fileStateService = fileStateService;
+		this.downloadManager = downloadManager;
     }
 
     public async validate(): Promise<ValidationResult[]> {
@@ -59,34 +67,75 @@ export class ValidationService {
 			return [];
 		}
 
-        const results = await this.runWithConcurrency(validationTasks, this.settings.maxConcurrentValidations);
-		return results.filter((r): r is ValidationResult => r !== null);
+        const results = (await this.runWithConcurrency(validationTasks, this.settings.maxConcurrentValidations))
+			.filter((r): r is ValidationResult => r !== null);
+		await this.recordResults(results);
+		return results;
     }
 
-	public async validateAndGetResult(objectId: string): Promise<ValidationResult | null> {
-		const objectFolder = await this.findObjectFolder(objectId);
-		if (objectFolder) {
-			const metadataPath = `${objectFolder}/mmf-metadata.json`;
-			if (await this.app.vault.adapter.exists(metadataPath)) {
-				const metadataContent = await this.app.vault.adapter.read(metadataPath);
-				const object = JSON.parse(metadataContent) as MMFObject;
-				return this.validateObject(object, objectFolder);
+	/**
+	 * Brings each object's state in line with what is on disk, so that a bad download does
+	 * not sit in "completed" where nothing would ever retry it. An object can have more
+	 * than one folder (a stale placeholder beside the real download); one valid folder is
+	 * enough. Objects that are being downloaded right now are left alone.
+	 */
+	private async recordResults(results: ValidationResult[]): Promise<void> {
+		const errorsById = new Map<string, string[] | null>();
+		for (const result of results) {
+			const id = String(result.object.id);
+			if (result.isValid) {
+				errorsById.set(id, null);
+			} else if (!errorsById.has(id)) {
+				errorsById.set(id, result.errors);
 			}
 		}
-		return null;
+
+		await this.fileStateService.addAll('all', Array.from(errorsById.keys()));
+		for (const [id, errors] of errorsById) {
+			const state = this.fileStateService.getState(id);
+			if (state !== undefined && ACTIVE_STATES.includes(state)) continue;
+
+			if (errors === null) {
+				await this.fileStateService.add(COMPLETED_STATE, id);
+			} else {
+				await this.fileStateService.add(VALIDATION_FAILURE_STATE, id);
+				await this.downloadManager.updateJob(id, 'failed', 100, 'Failed validation', errors.join(' '));
+			}
+		}
+	}
+
+	/**
+	 * Checks what is on disk for an object. If it has a real download and placeholder
+	 * folders as well, the real download is the one judged and the placeholders are
+	 * reported as stale.
+	 */
+	public async validateAndGetResult(objectId: string): Promise<ValidationResult | null> {
+		const downloads = await this.findDownloads(objectId);
+		if (downloads.length === 0) {
+			return null;
+		}
+
+		const chosen = downloads.find(download => !isPlaceholderObject(download.object)) ?? downloads[0];
+		const result = await this.validateObject(chosen.object, chosen.folderPath);
+		result.staleFolders = downloads
+			.filter(download => download !== chosen && isPlaceholderObject(download.object))
+			.map(download => download.folderPath);
+		return result;
 	}
 
 	public async deleteObjectFolder(folderPath: string): Promise<void> {
 		await this.app.vault.adapter.rmdir(folderPath, true);
 	}
 
-    private async findObjectFolder(objectId: string): Promise<string | null> {
+    /** Every folder under the download path whose metadata says it holds this object. */
+    private async findDownloads(objectId: string): Promise<{ folderPath: string; object: MMFObject }[]> {
         const downloadPath = this.settings.downloadPath;
         const adapter = this.app.vault.adapter;
         const targetId = String(objectId);
+        const downloads: { folderPath: string; object: MMFObject }[] = [];
 
         if (!await adapter.exists(downloadPath)) {
-            return null;
+            return downloads;
         }
 
         const designerFolders = await adapter.list(downloadPath);
@@ -99,16 +148,15 @@ export class ValidationService {
                 if (await adapter.exists(metadataPath)) {
                     const metadataContent = await adapter.read(metadataPath);
                     const object = JSON.parse(metadataContent) as MMFObject;
-                    const metadataId = object?.id !== undefined ? String(object.id) : null;
 
-                    if (metadataId === targetId) {
-                        return objectFolder;
+                    if (object?.id !== undefined && String(object.id) === targetId) {
+                        downloads.push({ folderPath: objectFolder, object });
                     }
                 }
             }
         }
 
-        return null;
+        return downloads;
     }
 
     private async validateObject(object: MMFObject, folderPath: string): Promise<ValidationResult> {
@@ -151,7 +199,8 @@ export class ValidationService {
 			imagesFolderMissing = !(await adapter.exists(imagesPath));
 			if (!imagesFolderMissing) {
 				const downloadedImages = await adapter.list(imagesPath);
-				imagesFound = downloadedImages.files.length;
+				// Notes the plugin leaves for images it could not fetch are not images.
+				imagesFound = downloadedImages.files.filter(file => !file.toLowerCase().endsWith('.md')).length;
 			}
 		}
 
@@ -252,12 +301,7 @@ export class ValidationService {
 				return null;
 			}
 
-			const result = await this.validateObject(object, objectFolder);
-			await this.fileStateService.add('all', object.id);
-			if (result.isValid) {
-				await this.fileStateService.add('80_completed', object.id);
-			}
-			return result;
+			return this.validateObject(object, objectFolder);
 		};
 	}
 

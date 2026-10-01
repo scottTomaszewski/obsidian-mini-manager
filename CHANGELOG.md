@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- "Validate Downloads" now marks bad downloads as failed, so "Retry Failed" and bulk download pick them up instead of treating them as completed
+- A placeholder folder under `Unknown/` is removed when the same model also has a real download, which is the one that gets checked
+- Notes left for images that failed to download are no longer counted as images
+- Removes the "Direct Download Method" setting: files are always downloaded when "Download Files" is on
+- A zip that cannot be extracted now fails the model instead of completing it
+- Rewrites the README
+
 ## 0.0.44
 
 - Fixes objects being saved as `Unknown/Object <id>` and marked complete when the MyMiniFactory login had expired or the API call failed. Such failures now fail the object instead

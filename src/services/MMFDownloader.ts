@@ -63,7 +63,7 @@ export class MMFDownloader {
 		this.downloadManager = downloadManager;
 		this.pluginDir = pluginDir;
 		this.imageDownloadService = new ImageDownloadService(this.app, this.logger, this.downloadManager);
-		this.fileDownloadService = new FileDownloadService(this.app, this.settings, this.logger, this.downloadManager, this.oauth2Service);
+		this.fileDownloadService = new FileDownloadService(this.app, this.logger, this.downloadManager, this.oauth2Service);
 	}
 
 	/** Starts working through whatever is queued. Called once the plugin has loaded. */
@@ -378,6 +378,12 @@ export class MMFDownloader {
 			this.logger.info(`(model ${objectId}) State updated to 'validating'`);
 			const validationResult = await this.validationService.validateAndGetResult(objectId);
 			if (abortController.signal.aborted) throw abortError();
+
+			// Placeholders an older version left behind for this object.
+			for (const staleFolder of validationResult?.staleFolders ?? []) {
+				this.logger.info(`Removing placeholder folder for object ${objectId}: ${staleFolder}`);
+				await this.validationService.deleteObjectFolder(staleFolder);
+			}
 
 			if (validationResult && validationResult.isValid) {
 				if (await this.fileStateService.move('10_validating', COMPLETED_STATE, objectId)) {

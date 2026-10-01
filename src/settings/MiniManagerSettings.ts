@@ -7,7 +7,6 @@ export interface MiniManagerSettings {
 	downloadPath: string;
 	downloadImages: boolean;
 	downloadFiles: boolean;
-	useDirectDownload: boolean;
 	maxRetries: number;
 	maxConcurrentDownloads: number;
 	maxConcurrentLightTasks: number;
@@ -20,7 +19,6 @@ export const DEFAULT_SETTINGS: MiniManagerSettings = {
 	downloadPath: 'MyMiniFactory',
 	downloadImages: true,
 	downloadFiles: true,
-	useDirectDownload: false,
 	maxRetries: 2,
 	maxConcurrentDownloads: 3,
 	maxConcurrentLightTasks: 5,
@@ -140,18 +138,7 @@ export class MiniManagerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-			
-		new Setting(containerEl)
-			.setName('Direct Download Method')
-			.setDesc('WARNING: May fail due to CORS issues. Disable to use alternative download methods.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.useDirectDownload)
-				.onChange(async (value) => {
-					this.plugin.settings.useDirectDownload = value;
-					await this.plugin.saveSettings();
-				})
-			);
-			
+
 		new Setting(containerEl).setName('Advanced Settings').setHeading();
 
 		new Setting(containerEl)
